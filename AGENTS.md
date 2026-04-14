@@ -10,8 +10,9 @@ Start by reading:
 2. `docs/CasprFlow-MVP-Initiation-v1.md`
 3. `docs/CasprFlow-Tech-Spec-v1.md`
 4. `docs/CasprFlow-Implementation-Plan-v1.md`
+5. `docs/phases/README.md`
 
-The implementation plan is the build-order source of truth. The tech spec is the tooling source of truth.
+The `docs/phases/` folder is the phase-by-phase execution source of truth. The implementation plan is the build-order source of truth. The tech spec is the tooling source of truth.
 
 ## Repo-Local Skills
 
@@ -36,6 +37,7 @@ Keep the MVP narrow:
 - no hotkey picker
 - selection-first context capture
 - tiny reply capsule
+- Gemini generation
 - one generated reply
 - editable draft inside the capsule
 - `Command + R` regenerate-from-edit
@@ -60,10 +62,11 @@ Preserve license headers and add attribution before public distribution if porti
 ## Working Rules
 
 - Prefer Swift, SwiftUI, and AppKit.
+- Use Gemini for generation.
 - Keep UI minimal and keyboard-first.
 - Do not build a large edit overlay.
 - Do not auto-send messages.
 - Use local files for MVP learning.
 - Keep docs aligned when scope changes.
 - Run the narrowest useful validation before finishing.
-
+- For phase work, complete one phase, write its report, and stop.

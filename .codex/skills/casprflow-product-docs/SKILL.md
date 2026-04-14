@@ -13,8 +13,9 @@ Use the docs in this order:
 2. `docs/CasprFlow-MVP-Initiation-v1.md` for MVP boundaries.
 3. `docs/CasprFlow-Tech-Spec-v1.md` for chosen technologies.
 4. `docs/CasprFlow-Implementation-Plan-v1.md` for sequence and shortcuts.
+5. `docs/phases/README.md` and the phase files for phase gates and handoff prompts.
 
-When updating docs, keep all four aligned. If changing MVP scope, update every doc that would otherwise contradict the new direction.
+When updating docs, keep all planning docs aligned. If changing MVP scope, update every doc that would otherwise contradict the new direction.
 
 ## Product Invariants
 
@@ -26,6 +27,7 @@ Keep these intact:
 - tiny reply capsule, not a bulky overlay
 - editable draft before paste
 - fixed `Option + Space` hotkey
+- Gemini generation
 - `Command + R` regenerate-from-edit
 - paste, never auto-send
 - local learning from corrections
@@ -77,4 +79,5 @@ Before finishing a docs task:
 2. Keep the MVP around 2-3 hours only if source reuse remains part of the plan.
 3. Confirm hotkey picker is not included in MVP.
 4. Confirm reply capsule and regenerate-from-edit are included.
-5. Run `git status --short`.
+5. Confirm generation uses Gemini, not OpenAI.
+6. Run `git status --short`.

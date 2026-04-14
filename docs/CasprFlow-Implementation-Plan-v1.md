@@ -240,7 +240,13 @@ Target time:
 
 ### Step 4: Add generation
 
-Implement one direct OpenAI API call with `URLSession`.
+Implement one direct Gemini API call with `URLSession`.
+
+Use:
+
+- default model: `gemini-3-flash-preview`
+- API key source: `GEMINI_API_KEY` or local developer config
+- request path: Gemini `generateContent`
 
 Input:
 

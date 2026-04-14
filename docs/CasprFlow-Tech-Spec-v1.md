@@ -54,11 +54,12 @@
 
 ## Generation
 
-- OpenAI API over `URLSession`.
+- Gemini API over `URLSession`.
+- Default fast model: `gemini-3-flash-preview`.
 - One text-generation request per draft.
 - One text-generation request per regeneration.
 - Model name is configurable in code or local config.
-- API key is supplied through local developer config for the MVP.
+- API key is supplied through local developer config or `GEMINI_API_KEY` for the MVP.
 - No account system.
 - No cloud backend.
 

@@ -395,7 +395,7 @@ For the one-day MVP, use native Mac tooling:
 - AppKit where needed
 - Menu bar app
 - KeyboardShortcuts or a similar hotkey helper
-- OpenAI API for generation
+- Gemini API for generation
 - Local JSON file for learning storage
 
 This route keeps the app close to the operating system and avoids building a browser extension or Electron shell before the interaction is proven.

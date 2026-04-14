@@ -13,8 +13,9 @@ Read these repo docs before making product or architecture choices:
 2. `docs/CasprFlow-MVP-Initiation-v1.md`
 3. `docs/CasprFlow-Tech-Spec-v1.md`
 4. `docs/CasprFlow-Implementation-Plan-v1.md`
+5. `docs/phases/README.md`
 
-Treat the implementation plan as the source of truth for MVP sequence. If the docs disagree, prefer the implementation plan for build order and the tech spec for tooling choices.
+Treat `docs/phases/` as the execution source of truth for phased work. Treat the implementation plan as the source of truth for MVP build order. If the docs disagree, prefer the phase files for phase gates, the implementation plan for build order, and the tech spec for tooling choices.
 
 ## MVP Definition
 
@@ -38,6 +39,7 @@ The MVP is done when this loop works:
 - Keep the app menu-bar/background-first.
 - Use fixed `Option + Space` hotkey in MVP.
 - Do not add a hotkey picker unless the user explicitly re-scopes the MVP.
+- Use Gemini generation, with `GEMINI_API_KEY` or local developer config.
 - Use a tiny reply capsule, not a bulky editor overlay.
 - Preserve user control: paste, never send.
 - Use local JSON for learning.
@@ -50,7 +52,7 @@ The MVP is done when this loop works:
 Implement in this order unless an existing codebase forces a small local adjustment:
 
 1. App shell and menu-bar lifecycle.
-2. Configurable global hotkey.
+2. Fixed global hotkey.
 3. Selected-text capture.
 4. Reply capsule.
 5. Generation.
@@ -60,6 +62,8 @@ Implement in this order unless an existing codebase forces a small local adjustm
 9. Demo pass in a small set of text surfaces.
 
 Do not broaden scope until the above loop works twice in a row.
+
+For phase-based execution, complete exactly one file from `docs/phases/`, write the phase report, and stop.
 
 ## Source Reuse
 
