@@ -1,0 +1,4 @@
+interface:
+  display_name: "CasprFlow MVP Build"
+  short_description: "Build the CasprFlow macOS reply MVP"
+  default_prompt: "Use $casprflow-mvp-build to implement the next CasprFlow MVP task."

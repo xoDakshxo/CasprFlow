@@ -1,0 +1,4 @@
+interface:
+  display_name: "CasprFlow macOS Automation"
+  short_description: "Implement hotkey, capture, paste, and capsule UI"
+  default_prompt: "Use $casprflow-macos-automation to work on CasprFlow native macOS automation."

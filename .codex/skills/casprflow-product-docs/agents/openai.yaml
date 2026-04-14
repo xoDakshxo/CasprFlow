@@ -1,0 +1,4 @@
+interface:
+  display_name: "CasprFlow Product Docs"
+  short_description: "Keep CasprFlow scope and docs aligned"
+  default_prompt: "Use $casprflow-product-docs to update CasprFlow planning or product docs."
