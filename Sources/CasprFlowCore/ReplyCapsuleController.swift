@@ -10,7 +10,7 @@ final class ReplyCapsuleController {
         let contentSize = NSSize(width: 360, height: 132)
         panel = ReplyCapsulePanel(
             contentRect: NSRect(origin: .zero, size: contentSize),
-            styleMask: [.borderless],
+            styleMask: [.nonactivatingPanel, .borderless],
             backing: .buffered,
             defer: false
         )
@@ -30,13 +30,13 @@ final class ReplyCapsuleController {
         panel.isOpaque = false
         panel.hasShadow = true
         panel.isReleasedWhenClosed = false
+        panel.hidesOnDeactivate = false
     }
 
     func show(title: String, message: String) {
         hostingView.rootView = ReplyCapsulePlaceholderView(title: title, message: message)
         positionNearTopCenter()
-        NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
+        panel.orderFrontRegardless()
     }
 
     func hide() {

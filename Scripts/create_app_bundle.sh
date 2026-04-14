@@ -11,7 +11,6 @@ RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 swift build -c "${CONFIGURATION}" >/dev/null
 BIN_DIR="$(swift build -c "${CONFIGURATION}" --show-bin-path)"
 
-rm -rf "${BUNDLE_DIR}"
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 cp "${BIN_DIR}/${APP_NAME}" "${MACOS_DIR}/${APP_NAME}"
 

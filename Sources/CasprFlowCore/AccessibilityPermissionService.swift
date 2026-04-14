@@ -4,7 +4,12 @@ import AppKit
 @MainActor
 final class AccessibilityPermissionService {
     var isTrusted: Bool {
-        Self.checkTrust(prompt: false)
+        let trusted = Self.checkTrust(prompt: false)
+        NSLog("[CasprFlow] AXIsProcessTrusted: %@, pid: %d, bundle: %@",
+              trusted ? "YES" : "NO",
+              ProcessInfo.processInfo.processIdentifier,
+              Bundle.main.bundleIdentifier ?? "none")
+        return trusted
     }
 
     func requestAccess() {

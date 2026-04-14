@@ -6,11 +6,11 @@ Highlighting text in another app and pressing `Option + Space` shows that select
 
 ## Scope
 
-- Save current clipboard string.
+- Save current clipboard contents.
 - Send synthetic `Command + C`.
-- Wait briefly for pasteboard update.
+- Wait briefly for pasteboard update and reject unchanged pasteboard reads.
 - Read selected text.
-- Restore previous clipboard string best-effort.
+- Restore previous clipboard contents best-effort.
 - Show `Highlight a message first.` if selected text is empty.
 - Keep the placeholder capsule. Do not add generation yet.
 
@@ -35,10 +35,12 @@ Recommended unit coverage:
 ## Manual Checks
 
 - Open Notes.
+- Copy `OLD_CLIPBOARD_SENTINEL` before testing so stale clipboard fallback is easy to spot.
 - Type or find text: `Can you send me the project update by tonight?`
 - Highlight that text.
 - Press `Option + Space`.
 - Confirm capsule shows the selected message.
+- Confirm capsule does not show `OLD_CLIPBOARD_SENTINEL`.
 - Press `Escape`.
 - Trigger with no selected text.
 - Confirm capsule shows `Highlight a message first.`
@@ -60,4 +62,3 @@ Recommended unit coverage:
 ```text
 Use the repo-local CasprFlow skills and execute docs/phases/phase-3-stub-reply-capsule-and-paste.md. Complete only that phase, run its checks, write the phase report, and stop.
 ```
-

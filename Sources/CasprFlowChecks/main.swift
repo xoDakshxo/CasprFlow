@@ -16,6 +16,11 @@ let state = StatusItemState(isEnabled: true, isAccessibilityTrusted: false)
 expect(state.isEnabled, "status item enabled flag")
 expect(!state.isAccessibilityTrusted, "status item accessibility flag")
 
+expect(SelectionTextNormalizer.clean(nil) == nil, "nil selected text")
+expect(SelectionTextNormalizer.clean("   \n\t  ") == nil, "empty selected text")
+expect(SelectionTextNormalizer.clean("  hello  ") == "hello", "trimmed selected text")
+expect(SelectionTextNormalizer.clean("\nhello\nworld\n") == "hello\nworld", "multiline selected text")
+
 Task { @MainActor in
     expect(PhaseOneSelfCheck.canCreateReplyCapsule(), "reply capsule construction")
     expect(PhaseOneSelfCheck.canRegisterDefaultHotkey(), "default hotkey registration")

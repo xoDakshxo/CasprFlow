@@ -4,6 +4,7 @@ import AppKit
 final class AppCoordinator {
     private let hotkeyService = HotkeyService()
     private let permissionService = AccessibilityPermissionService()
+    private lazy var selectionCaptureService = SelectionCaptureService(permissionService: permissionService)
     private let capsuleController = ReplyCapsuleController()
     private var statusItemController: StatusItemController?
     private var isEnabled = true
@@ -52,10 +53,26 @@ final class AppCoordinator {
 
     private func handleHotkey() {
         guard isEnabled else { return }
-        capsuleController.show(
-            title: "CasprFlow",
-            message: permissionMessage
-        )
+        NSLog("[CasprFlow] Hotkey fired")
+        Task { @MainActor [weak self] in
+            await self?.captureSelectionAndShowCapsule()
+        }
+    }
+
+    private func captureSelectionAndShowCapsule() async {
+        let result = await selectionCaptureService.captureSelectedText()
+        NSLog("[CasprFlow] Capture result: %@", String(describing: result))
+        switch result {
+        case .selected(let text):
+            capsuleController.show(title: "Selected message", message: text)
+        case .empty:
+            capsuleController.show(title: "CasprFlow", message: "Highlight a message first.")
+        case .permissionRequired:
+            capsuleController.show(
+                title: "Accessibility needed",
+                message: "Allow CasprFlow in Accessibility, then highlight a message."
+            )
+        }
     }
 
     private func showLearningCleared() {
@@ -65,7 +82,4 @@ final class AppCoordinator {
         )
     }
 
-    private var permissionMessage: String {
-        "Ready for Phase 2: selected text capture."
-    }
 }
