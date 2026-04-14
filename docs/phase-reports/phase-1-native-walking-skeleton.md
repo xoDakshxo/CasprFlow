@@ -31,7 +31,8 @@ Status: Passed
   - Passed: `make build`
 - Unit tests:
   - Passed: `make test`
-  - Note: the active developer directory is still Command Line Tools, which did not expose XCTest or Swift Testing in this environment. `make test` uses a Swift executable checks target instead.
+  - `make test` uses a Swift executable checks target so phase checks stay command-line repeatable for Codex.
+  - Re-run after full Xcode selection: passed with Xcode 26.4 / Swift 6.3.
 - Manual smoke:
   - Passed: launched `.build/CasprFlow.app` and confirmed the `CasprFlow` process started.
   - Passed: quit the app via AppleScript and confirmed no `CasprFlow` process remained.
@@ -53,6 +54,7 @@ Status: Passed
   - `osascript -e 'tell application "CasprFlow" to quit'`
   - `xcode-select -p`
   - `xcodebuild -version`
+  - `swift --version` after full Xcode selection
 - Apps tested:
   - `CasprFlow.app` launched from `.build/CasprFlow.app`.
 - Files changed:
@@ -75,16 +77,10 @@ Status: Passed
 
 ## Known Issues
 
-- Full Xcode is installed at `/Applications/Xcode.app`, but `xcode-select -p` still points to `/Library/Developer/CommandLineTools`.
-- `xcodebuild -version` reports that the active developer directory is Command Line Tools. To select full Xcode later, run:
-
-```sh
-sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
-```
-
+- Full Xcode is now selected: `/Applications/Xcode.app/Contents/Developer`.
+- `xcodebuild -version` reports Xcode 26.4, build version 17E192.
 - `osascript` could not send `Option + Space` because System Events does not have keystroke permission. This does not block Phase 1 because the checks target directly registers the real hotkey and the app launch path is verified.
 
 ## Next Phase Prompt
 
 Use the repo-local CasprFlow skills and execute docs/phases/phase-2-selected-text-capture.md. Complete only that phase, run its checks, write the phase report, commit the phase, and stop.
-
