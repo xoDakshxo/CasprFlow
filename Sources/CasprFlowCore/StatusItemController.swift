@@ -15,21 +15,21 @@ final class StatusItemController: NSObject {
     private let statusItem: NSStatusItem
     private let onToggleEnabled: () -> Void
     private let onClearLearning: () -> Void
-    private let onOpenAccessibility: () -> Void
+    private let onRequestAccessibility: () -> Void
     private let onQuit: () -> Void
     private let stateProvider: () -> StatusItemState
 
     init(
         onToggleEnabled: @escaping () -> Void,
         onClearLearning: @escaping () -> Void,
-        onOpenAccessibility: @escaping () -> Void,
+        onRequestAccessibility: @escaping () -> Void,
         onQuit: @escaping () -> Void,
         stateProvider: @escaping () -> StatusItemState
     ) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.onToggleEnabled = onToggleEnabled
         self.onClearLearning = onClearLearning
-        self.onOpenAccessibility = onOpenAccessibility
+        self.onRequestAccessibility = onRequestAccessibility
         self.onQuit = onQuit
         self.stateProvider = stateProvider
         super.init()
@@ -94,7 +94,7 @@ final class StatusItemController: NSObject {
     }
 
     @objc private func openAccessibility() {
-        onOpenAccessibility()
+        onRequestAccessibility()
     }
 
     @objc private func quit() {

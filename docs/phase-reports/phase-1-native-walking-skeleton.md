@@ -8,6 +8,7 @@ Status: Passed
   - Added a SwiftPM native macOS app structure.
   - Added `make build`, `make test`, and `make run`.
   - Added a generated `.app` bundle at `.build/CasprFlow.app`.
+  - Updated bundle creation to sign the final `.app` bundle as `com.casprflow.CasprFlow`.
   - Added a menu-bar/background app coordinator.
   - Added a fixed `Option + Space` Carbon hotkey service.
   - Added a tiny borderless placeholder reply capsule.
@@ -17,6 +18,7 @@ Status: Passed
   - The app builds from the command line.
   - The bundled app launches as a process.
   - The Phase 1 checks verify the default hotkey descriptor, reply capsule construction, and actual Carbon hotkey registration/unregistration.
+  - The app bundle now has a stable signed bundle identifier for Accessibility/TCC.
   - The app can be launched with `make run`.
 - What was intentionally skipped:
   - No selected-text capture.
@@ -48,6 +50,7 @@ Status: Passed
   - `make build`
   - `make test`
   - `plutil -p .build/CasprFlow.app/Contents/Info.plist`
+  - `codesign -dv .build/CasprFlow.app`
   - `open -n .build/CasprFlow.app`
   - `ps ax -o pid,comm | rg CasprFlow`
   - `osascript -e 'tell application "System Events" to key code 49 using option down'`
@@ -79,6 +82,7 @@ Status: Passed
 
 - Full Xcode is now selected: `/Applications/Xcode.app/Contents/Developer`.
 - `xcodebuild -version` reports Xcode 26.4, build version 17E192.
+- If Accessibility was granted before this signing fix, remove the old CasprFlow entry from System Settings and add `.build/CasprFlow.app` again. The previous build used an unstable ad-hoc executable identity; the current app signs the final bundle as `com.casprflow.CasprFlow`.
 - `osascript` could not send `Option + Space` because System Events does not have keystroke permission. This does not block Phase 1 because the checks target directly registers the real hotkey and the app launch path is verified.
 
 ## Next Phase Prompt

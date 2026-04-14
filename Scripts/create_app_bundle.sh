@@ -48,5 +48,6 @@ cat > "${CONTENTS_DIR}/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-echo "Built ${BUNDLE_DIR}"
+/usr/bin/codesign --force --deep --sign - "${BUNDLE_DIR}" >/dev/null
 
+echo "Built ${BUNDLE_DIR}"

@@ -12,7 +12,7 @@ final class AppCoordinator {
         statusItemController = StatusItemController(
             onToggleEnabled: { [weak self] in self?.toggleEnabled() },
             onClearLearning: { [weak self] in self?.showLearningCleared() },
-            onOpenAccessibility: { [weak self] in self?.permissionService.openSystemSettings() },
+            onRequestAccessibility: { [weak self] in self?.permissionService.requestAccess() },
             onQuit: { NSApp.terminate(nil) },
             stateProvider: { [weak self] in
                 StatusItemState(
@@ -72,4 +72,3 @@ final class AppCoordinator {
         return "Ready. Accessibility permission will be needed for capture and paste."
     }
 }
-
