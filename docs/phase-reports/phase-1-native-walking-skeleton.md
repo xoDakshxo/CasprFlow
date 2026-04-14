@@ -13,7 +13,8 @@ Status: Passed
   - Added a fixed `Option + Space` Carbon hotkey service.
   - Added a tiny borderless placeholder reply capsule.
   - Added `Escape` handling to close the capsule.
-  - Added basic Accessibility permission state in the menu/capsule messaging.
+  - Added basic Accessibility permission state in the menu.
+  - Kept the Phase 1 capsule message focused on Phase 1 readiness, since Accessibility is not required until capture/paste work.
 - What now works:
   - The app builds from the command line.
   - The bundled app launches as a process.
@@ -38,6 +39,7 @@ Status: Passed
 - Manual smoke:
   - Passed: launched `.build/CasprFlow.app` and confirmed the `CasprFlow` process started.
   - Passed: quit the app via AppleScript and confirmed no `CasprFlow` process remained.
+  - The capsule message should read: `Ready for Phase 2: selected text capture.`
   - Not directly automated: sending `Option + Space` via `osascript` was blocked because `osascript` is not allowed to send keystrokes. The checks target directly verified the actual hotkey registration path instead.
 - Docs/skills:
   - Phase remained within scope: fixed `Option + Space`, no hotkey picker, no generation, no paste, no learning.

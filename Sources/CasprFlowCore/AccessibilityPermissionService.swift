@@ -1,4 +1,4 @@
-import ApplicationServices
+@preconcurrency import ApplicationServices
 import AppKit
 
 @MainActor
@@ -19,8 +19,10 @@ final class AccessibilityPermissionService {
         NSWorkspace.shared.open(url)
     }
 
-    private nonisolated static func checkTrust(prompt: Bool) -> Bool {
-        let options = ["AXTrustedCheckOptionPrompt": prompt] as CFDictionary
+    @MainActor
+    private static func checkTrust(prompt: Bool) -> Bool {
+        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+        let options = [key: prompt] as CFDictionary
         return AXIsProcessTrustedWithOptions(options)
     }
 }

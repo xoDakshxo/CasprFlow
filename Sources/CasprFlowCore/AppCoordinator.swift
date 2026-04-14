@@ -66,9 +66,6 @@ final class AppCoordinator {
     }
 
     private var permissionMessage: String {
-        if permissionService.isTrusted {
-            return "Ready for Phase 2: selected text capture."
-        }
-        return "Ready. Accessibility permission will be needed for capture and paste."
+        "Ready for Phase 2: selected text capture."
     }
 }
