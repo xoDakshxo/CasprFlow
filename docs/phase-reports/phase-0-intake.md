@@ -7,7 +7,7 @@ Status: Passed
 - What changed:
   - Verified the phase-based execution setup is present under `docs/phases/`.
   - Verified repo-local agent skills are present and valid.
-  - Created `docs/CasprFlow-Source-Reuse-Audit-v1.md`.
+  - Created `docs/phase-audits/source-reuse-audit-v1.md`.
   - Confirmed Gemini is the generation provider for product code.
 - What now works:
   - The repo has a clear Phase 1 starting point.
@@ -48,7 +48,7 @@ Status: Passed
 - Apps tested:
   - None. Phase 0 is planning and source-reuse intake only.
 - Files changed:
-  - `docs/CasprFlow-Source-Reuse-Audit-v1.md`
+  - `docs/phase-audits/source-reuse-audit-v1.md`
   - `docs/phase-reports/phase-0-intake.md`
 
 ## Source Reuse Decision
@@ -75,4 +75,3 @@ Do not port Axii wholesale because its app is coupled to audio recording, transc
 ## Next Phase Prompt
 
 Use the repo-local CasprFlow skills and execute docs/phases/phase-1-native-walking-skeleton.md. Complete only that phase, run its checks, write the phase report, commit the phase, and stop.
-

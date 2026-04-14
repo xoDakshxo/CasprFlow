@@ -17,7 +17,7 @@ The repo has a confirmed implementation path before app code starts.
 ## Deliverables
 
 - `docs/phase-reports/phase-0-intake.md`
-- Optional: `docs/CasprFlow-Source-Reuse-Audit-v1.md` if source reuse details are non-trivial.
+- Optional: `docs/phase-audits/source-reuse-audit-v1.md` if source reuse details are non-trivial.
 
 ## Automated Checks
 
@@ -59,4 +59,3 @@ Confirm the phase plan, tech spec, MVP initiation doc, implementation plan, and 
 ```text
 Use the repo-local CasprFlow skills and execute docs/phases/phase-1-native-walking-skeleton.md. Complete only that phase, run its checks, write the phase report, and stop.
 ```
-
