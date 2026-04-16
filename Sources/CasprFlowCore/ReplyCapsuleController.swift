@@ -70,7 +70,7 @@ final class ReplyCapsuleController {
         currentContext = context
 
         let productSize = NSSize(width: 420, height: 216)
-        let initialDraft = stubReplyGenerator.initialReply(for: context.selectedText ?? "")
+        let initialDraft = stubReplyGenerator.initialReply(for: context.promptContext.text)
         productHostingView.rootView = AnyView(
             ProductReplyCapsuleView(
                 context: context,
@@ -82,7 +82,7 @@ final class ReplyCapsuleController {
                 },
                 onRegenerate: { [stubReplyGenerator] currentDraft, attempt in
                     stubReplyGenerator.regeneratedReply(
-                        for: context.selectedText ?? "",
+                        for: context.promptContext.text,
                         currentDraft: currentDraft,
                         attempt: attempt
                     )
@@ -269,12 +269,17 @@ struct ProductReplyCapsuleView: View {
             }
 
             if let selected = context.selectedText {
-                Text("Replying to: \(selected)")
+                Text("Selected: \(selected)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            } else if context.promptContext.hasUsableContext {
+                Text(Self.contextPreview(context.promptContext.text))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             } else {
-                Text("Highlight a message first.")
+                Text("Focus a reply field with visible context.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -314,6 +319,14 @@ struct ProductReplyCapsuleView: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(.white.opacity(0.18), lineWidth: 1)
         )
+    }
+
+    private static func contextPreview(_ text: String) -> String {
+        let normalized = text
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return "Context: " + String(normalized.prefix(150))
     }
 }
 
@@ -445,6 +458,7 @@ struct ContextCapsuleView: View {
     @State private var isMetadataExpanded = false
     @State private var isWindowsExpanded = false
     @State private var isAIDescExpanded = false
+    @State private var isPromptContextExpanded = true
 
     var body: some View {
         ScrollView {
@@ -457,6 +471,20 @@ struct ContextCapsuleView: View {
                 contextHeader
 
                 Divider().opacity(0.3)
+
+                collapsibleSection(
+                    label: "Prompt Context (\(context.promptContext.captureMode.rawValue), confidence \(String(format: "%.2f", context.promptContext.confidence)))",
+                    isExpanded: $isPromptContextExpanded
+                ) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        metadataRow("Candidates", "\(context.promptContext.candidateCount)")
+                        metadataRow("Dropped", "\(context.promptContext.droppedCandidateCount)")
+                        Text(context.promptContext.hasUsableContext ? context.promptContext.text : "No usable prompt context.")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
 
                 // Selected text
                 if let selected = context.selectedText {

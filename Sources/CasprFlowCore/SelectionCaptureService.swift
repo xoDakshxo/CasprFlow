@@ -23,6 +23,7 @@ final class SelectionCaptureService {
             Self.debugLog("Not trusted")
             return ScreenContext(
                 captureResult: .permissionRequired,
+                promptContext: .empty,
                 appName: nil,
                 bundleIdentifier: nil,
                 processIdentifier: nil,
@@ -68,6 +69,7 @@ final class SelectionCaptureService {
         // Selection capture
         var captureResult: SelectionCaptureResult = .empty
         var surroundingText: ScreenContext.SurroundingText?
+        var captureMode: ScreenContext.CaptureMode = .axOnly
 
         if let element = focusedElement {
             let rawSelected = Self.str(element, kAXSelectedTextAttribute)
@@ -91,20 +93,46 @@ final class SelectionCaptureService {
             }
         }
 
-        if case .empty = captureResult {
+        // Walk the AX tree of the focused window for visible elements
+        let visibleElements = Self.walkVisibleElements(pid: pid)
+
+        if case .empty = captureResult,
+           !Self.hasAutomaticContext(fullValue: fullValue, visibleElements: visibleElements) {
             if let clipboardSelection = await Self.captureViaClipboard() {
                 captureResult = .selected(clipboardSelection)
+                captureMode = .clipboardSelection
                 Self.debugLog("Clipboard: \(clipboardSelection.prefix(60))...")
             } else {
                 Self.debugLog("All capture methods failed")
             }
         }
 
-        // Walk the AX tree of the focused window for visible elements
-        let visibleElements = Self.walkVisibleElements(pid: pid)
+        let promptContext = ScreenContext.makePromptContext(
+            captureResult: captureResult,
+            appName: appName,
+            windowTitle: windowTitle,
+            focusedElementRole: elementRole,
+            fullElementValue: fullValue,
+            surroundingText: surroundingText,
+            visibleElements: visibleElements
+        )
+
+        let resolvedPromptContext: ScreenContext.PromptContext
+        if captureMode == .clipboardSelection {
+            resolvedPromptContext = ScreenContext.PromptContext(
+                text: promptContext.text,
+                confidence: promptContext.confidence,
+                captureMode: .clipboardSelection,
+                candidateCount: promptContext.candidateCount,
+                droppedCandidateCount: promptContext.droppedCandidateCount
+            )
+        } else {
+            resolvedPromptContext = promptContext
+        }
 
         return ScreenContext(
             captureResult: captureResult,
+            promptContext: resolvedPromptContext,
             appName: appName,
             bundleIdentifier: bundleId,
             processIdentifier: pid,
@@ -200,6 +228,20 @@ final class SelectionCaptureService {
             return true
         default:
             return false
+        }
+    }
+
+    private static func hasAutomaticContext(
+        fullValue: String?,
+        visibleElements: [ScreenContext.VisibleElement]
+    ) -> Bool {
+        if SelectionTextNormalizer.clean(fullValue) != nil {
+            return true
+        }
+
+        return visibleElements.contains { element in
+            guard !isLayoutRole(element.role) else { return false }
+            return SelectionTextNormalizer.clean(element.label ?? element.value) != nil
         }
     }
 
@@ -512,6 +554,7 @@ final class SelectionCaptureService {
 extension ScreenContext {
     static let empty = ScreenContext(
         captureResult: .permissionRequired,
+        promptContext: .empty,
         appName: nil, bundleIdentifier: nil, processIdentifier: nil,
         windowTitle: nil, allWindows: [],
         focusedElementRole: nil, focusedElementSubrole: nil,

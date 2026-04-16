@@ -68,15 +68,20 @@ final class AppCoordinator {
         let context = await selectionCaptureService.captureContext()
         NSLog("[CasprFlow] Capture result: %@", String(describing: context.captureResult))
         switch context.captureResult {
-        case .selected:
-            capsuleController.showContext(context)
-        case .empty:
-            capsuleController.show(title: "CasprFlow", message: "Highlight a message first.")
         case .permissionRequired:
             capsuleController.show(
                 title: "Accessibility needed",
-                message: "Allow CasprFlow in Accessibility, then highlight a message."
+                message: "Allow CasprFlow in Accessibility, then press Option + Space again."
             )
+        case .selected, .empty:
+            if context.promptContext.hasUsableContext {
+                capsuleController.showContext(context)
+            } else {
+                capsuleController.show(
+                    title: "Need more context",
+                    message: "Focus a reply field with visible message text, then press Option + Space."
+                )
+            }
         }
     }
 

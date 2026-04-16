@@ -11,16 +11,16 @@ public struct StubReplyGenerator: Sendable {
         ]
     }
 
-    public func initialReply(for selectedText: String) -> String {
-        guard SelectionTextNormalizer.clean(selectedText) != nil else {
-            return "Highlight a message first."
+    public func initialReply(for contextText: String) -> String {
+        guard SelectionTextNormalizer.clean(contextText) != nil else {
+            return "I can reply once there is visible message context."
         }
         return replies[0]
     }
 
-    public func regeneratedReply(for selectedText: String, currentDraft: String, attempt: Int) -> String {
-        guard SelectionTextNormalizer.clean(selectedText) != nil else {
-            return "Highlight a message first."
+    public func regeneratedReply(for contextText: String, currentDraft: String, attempt: Int) -> String {
+        guard SelectionTextNormalizer.clean(contextText) != nil else {
+            return "I can reply once there is visible message context."
         }
 
         let current = SelectionTextNormalizer.clean(currentDraft)

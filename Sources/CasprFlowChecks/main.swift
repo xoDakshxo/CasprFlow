@@ -25,6 +25,8 @@ expect(PhaseThreeSelfCheck.stubGeneratorReturnsOneReply(), "stub generator retur
 expect(PhaseThreeSelfCheck.stubRegenerationChangesReply(), "stub regeneration changes reply")
 expect(PhaseThreeSelfCheck.pasteServiceRejectsEmptyText(), "paste service rejects empty text")
 expect(PhaseThreeSelfCheck.pasteServiceKeepsUserTextUntrimmed(), "paste service keeps user text untrimmed")
+expect(PhaseThreeSelfCheck.promptContextWorksWithoutSelection(), "prompt context works without selection")
+expect(PhaseThreeSelfCheck.promptContextDropsChrome(), "prompt context drops chrome")
 
 Task { @MainActor in
     expect(PhaseOneSelfCheck.canCreateReplyCapsule(), "reply capsule construction")

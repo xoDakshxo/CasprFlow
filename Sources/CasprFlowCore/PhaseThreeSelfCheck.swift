@@ -28,6 +28,42 @@ public enum PhaseThreeSelfCheck {
         PasteService.validatedPasteText("  keep spacing  ") == "  keep spacing  "
     }
 
+    public static func promptContextWorksWithoutSelection() -> Bool {
+        let prompt = ScreenContext.makePromptContext(
+            captureResult: .empty,
+            appName: "Notes",
+            windowTitle: "Project notes",
+            focusedElementRole: "AXTextArea",
+            fullElementValue: "Can you send the updated timeline today?\n\n",
+            surroundingText: nil,
+            visibleElements: []
+        )
+
+        return prompt.hasUsableContext
+            && prompt.captureMode == .axOnly
+            && prompt.text.contains("Can you send the updated timeline today?")
+            && prompt.confidence > 0.5
+    }
+
+    public static func promptContextDropsChrome() -> Bool {
+        let prompt = ScreenContext.makePromptContext(
+            captureResult: .empty,
+            appName: "Browser",
+            windowTitle: "Chat",
+            focusedElementRole: "AXTextField",
+            fullElementValue: nil,
+            surroundingText: nil,
+            visibleElements: [
+                ScreenContext.VisibleElement(role: "AXButton", label: "Send", value: nil, identifier: nil, depth: 1),
+                ScreenContext.VisibleElement(role: "AXStaticText", label: "Can you review this today?", value: nil, identifier: nil, depth: 2)
+            ]
+        )
+
+        return prompt.text.contains("Can you review this today?")
+            && !prompt.text.contains("Send")
+            && prompt.droppedCandidateCount > 0
+    }
+
     @MainActor
     public static func canCreatePhaseThreeCapsule() -> Bool {
         _ = NSApplication.shared
