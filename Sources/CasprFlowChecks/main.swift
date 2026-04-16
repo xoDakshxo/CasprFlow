@@ -21,9 +21,15 @@ expect(SelectionTextNormalizer.clean("   \n\t  ") == nil, "empty selected text")
 expect(SelectionTextNormalizer.clean("  hello  ") == "hello", "trimmed selected text")
 expect(SelectionTextNormalizer.clean("\nhello\nworld\n") == "hello\nworld", "multiline selected text")
 
+expect(PhaseThreeSelfCheck.stubGeneratorReturnsOneReply(), "stub generator returns one reply")
+expect(PhaseThreeSelfCheck.stubRegenerationChangesReply(), "stub regeneration changes reply")
+expect(PhaseThreeSelfCheck.pasteServiceRejectsEmptyText(), "paste service rejects empty text")
+expect(PhaseThreeSelfCheck.pasteServiceKeepsUserTextUntrimmed(), "paste service keeps user text untrimmed")
+
 Task { @MainActor in
     expect(PhaseOneSelfCheck.canCreateReplyCapsule(), "reply capsule construction")
     expect(PhaseOneSelfCheck.canRegisterDefaultHotkey(), "default hotkey registration")
+    expect(PhaseThreeSelfCheck.canCreatePhaseThreeCapsule(), "phase 3 capsule construction")
     print("CasprFlow checks passed")
     exit(0)
 }

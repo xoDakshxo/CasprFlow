@@ -21,7 +21,22 @@ final class SelectionCaptureService {
     func captureContext() async -> ScreenContext {
         guard permissionService.isTrusted else {
             Self.debugLog("Not trusted")
-            return .empty
+            return ScreenContext(
+                captureResult: .permissionRequired,
+                appName: nil,
+                bundleIdentifier: nil,
+                processIdentifier: nil,
+                windowTitle: nil,
+                allWindows: [],
+                focusedElementRole: nil,
+                focusedElementSubrole: nil,
+                elementDescription: nil,
+                documentURL: nil,
+                elementIdentifier: nil,
+                fullElementValue: nil,
+                surroundingText: nil,
+                visibleElements: []
+            )
         }
 
         let frontApp = NSWorkspace.shared.frontmostApplication
@@ -92,6 +107,7 @@ final class SelectionCaptureService {
             captureResult: captureResult,
             appName: appName,
             bundleIdentifier: bundleId,
+            processIdentifier: pid,
             windowTitle: windowTitle,
             allWindows: allWindows,
             focusedElementRole: elementRole,
@@ -496,7 +512,7 @@ final class SelectionCaptureService {
 extension ScreenContext {
     static let empty = ScreenContext(
         captureResult: .permissionRequired,
-        appName: nil, bundleIdentifier: nil,
+        appName: nil, bundleIdentifier: nil, processIdentifier: nil,
         windowTitle: nil, allWindows: [],
         focusedElementRole: nil, focusedElementSubrole: nil,
         elementDescription: nil, documentURL: nil,

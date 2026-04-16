@@ -7,6 +7,8 @@ final class ReplyCapsuleController {
     private let debugPanel: ReplyCapsulePanel
     private let productHostingView: NSHostingView<AnyView>
     private let debugHostingView: NSHostingView<AnyView>
+    private let stubReplyGenerator = StubReplyGenerator()
+    private let pasteService = PasteService()
     private var currentContext: ScreenContext?
 
     init() {
@@ -68,11 +70,33 @@ final class ReplyCapsuleController {
         currentContext = context
 
         let productSize = NSSize(width: 420, height: 216)
-        productHostingView.rootView = AnyView(ProductReplyCapsulePreviewView(context: context))
+        let initialDraft = stubReplyGenerator.initialReply(for: context.selectedText ?? "")
+        productHostingView.rootView = AnyView(
+            ProductReplyCapsuleView(
+                context: context,
+                initialDraft: initialDraft,
+                onPaste: { [weak self] draft in
+                    Task { @MainActor in
+                        await self?.pasteCurrentDraft(draft, context: context)
+                    }
+                },
+                onRegenerate: { [stubReplyGenerator] currentDraft, attempt in
+                    stubReplyGenerator.regeneratedReply(
+                        for: context.selectedText ?? "",
+                        currentDraft: currentDraft,
+                        attempt: attempt
+                    )
+                },
+                onCancel: { [weak self] in
+                    self?.hide()
+                }
+            )
+        )
         productHostingView.frame = NSRect(origin: .zero, size: productSize)
         productPanel.setContentSize(productSize)
         positionProductPanel()
         productPanel.orderFrontRegardless()
+        productPanel.makeKey()
 
         let debugSize = NSSize(width: 480, height: 520)
         debugHostingView.rootView = AnyView(ContextCapsuleView(context: context))
@@ -85,6 +109,22 @@ final class ReplyCapsuleController {
     func hide() {
         productPanel.orderOut(nil)
         debugPanel.orderOut(nil)
+    }
+
+    private func pasteCurrentDraft(_ draft: String, context: ScreenContext) async {
+        guard PasteService.validatedPasteText(draft) != nil else {
+            show(title: "Nothing to paste", message: "Write a reply first.")
+            return
+        }
+
+        hide()
+        let didPaste = await pasteService.paste(draft, into: context.processIdentifier)
+        if !didPaste {
+            show(
+                title: "Paste unavailable",
+                message: "Could not restore the previous app. Try focusing the reply field and use the hotkey again."
+            )
+        }
     }
 
     private func positionProductPanel() {
@@ -176,16 +216,29 @@ struct ReplyCapsulePlaceholderView: View {
     }
 }
 
-// MARK: - Product capsule preview
+// MARK: - Product reply capsule
 
-struct ProductReplyCapsulePreviewView: View {
+struct ProductReplyCapsuleView: View {
     let context: ScreenContext
+    let onPaste: (String) -> Void
+    let onRegenerate: (String, Int) -> String
+    let onCancel: () -> Void
 
     @State private var draftText: String
+    @State private var regenerationAttempt = 0
 
-    init(context: ScreenContext) {
+    init(
+        context: ScreenContext,
+        initialDraft: String,
+        onPaste: @escaping (String) -> Void,
+        onRegenerate: @escaping (String, Int) -> String,
+        onCancel: @escaping () -> Void
+    ) {
         self.context = context
-        _draftText = State(initialValue: Self.previewDraft(for: context))
+        self.onPaste = onPaste
+        self.onRegenerate = onRegenerate
+        self.onCancel = onCancel
+        _draftText = State(initialValue: initialDraft)
     }
 
     var body: some View {
@@ -195,7 +248,7 @@ struct ProductReplyCapsulePreviewView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.primary)
 
-                Text("product preview")
+                Text("stub reply")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 7)
@@ -226,11 +279,15 @@ struct ProductReplyCapsulePreviewView: View {
                     .foregroundStyle(.secondary)
             }
 
-            TextEditor(text: $draftText)
-                .font(.system(size: 13))
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+            ReplyDraftEditor(
+                text: $draftText,
+                onSubmit: { onPaste(draftText) },
+                onRegenerate: {
+                    regenerationAttempt += 1
+                    draftText = onRegenerate(draftText, regenerationAttempt)
+                },
+                onCancel: onCancel
+            )
                 .frame(height: 86)
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -242,7 +299,7 @@ struct ProductReplyCapsulePreviewView: View {
                 )
 
             HStack {
-                Text("Preview only")
+                Text("Stub mode")
                 Spacer()
                 Text("Enter paste | Cmd+R regenerate | Esc")
             }
@@ -258,15 +315,108 @@ struct ProductReplyCapsulePreviewView: View {
                 .stroke(.white.opacity(0.18), lineWidth: 1)
         )
     }
+}
 
-    private static func previewDraft(for context: ScreenContext) -> String {
-        guard let selected = context.selectedText, !selected.isEmpty else {
-            return "Select a message, then press Option + Space."
+struct ReplyDraftEditor: NSViewRepresentable {
+    @Binding var text: String
+    let onSubmit: () -> Void
+    let onRegenerate: () -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = true
+
+        let textView = KeyHandlingTextView()
+        textView.delegate = context.coordinator
+        textView.string = text
+        textView.isRichText = false
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.drawsBackground = false
+        textView.font = .systemFont(ofSize: 13)
+        textView.textColor = .labelColor
+        textView.insertionPointColor = .labelColor
+        textView.textContainerInset = NSSize(width: 8, height: 7)
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.containerSize = NSSize(
+            width: scrollView.contentSize.width,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        textView.textContainer?.widthTracksTextView = true
+        textView.onSubmit = { context.coordinator.parent.onSubmit() }
+        textView.onRegenerate = { context.coordinator.parent.onRegenerate() }
+        textView.onCancel = { context.coordinator.parent.onCancel() }
+
+        scrollView.documentView = textView
+
+        DispatchQueue.main.async {
+            textView.window?.makeFirstResponder(textView)
         }
 
-        let trimmed = selected.replacingOccurrences(of: "\n", with: " ")
-        let preview = trimmed.count > 110 ? String(trimmed.prefix(110)) + "..." : trimmed
-        return "Draft preview for: \(preview)"
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        context.coordinator.parent = self
+        guard let textView = scrollView.documentView as? KeyHandlingTextView else { return }
+
+        if textView.string != text {
+            textView.string = text
+        }
+
+        textView.onSubmit = { context.coordinator.parent.onSubmit() }
+        textView.onRegenerate = { context.coordinator.parent.onRegenerate() }
+        textView.onCancel = { context.coordinator.parent.onCancel() }
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: ReplyDraftEditor
+
+        init(parent: ReplyDraftEditor) {
+            self.parent = parent
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            parent.text = textView.string
+        }
+    }
+}
+
+private final class KeyHandlingTextView: NSTextView {
+    var onSubmit: (() -> Void)?
+    var onRegenerate: (() -> Void)?
+    var onCancel: (() -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 {
+            onCancel?()
+            return
+        }
+
+        if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers?.lowercased() == "r" {
+            onRegenerate?()
+            return
+        }
+
+        if event.keyCode == 36 || event.keyCode == 76 {
+            onSubmit?()
+            return
+        }
+
+        super.keyDown(with: event)
     }
 }
 

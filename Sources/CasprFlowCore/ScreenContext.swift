@@ -41,6 +41,7 @@ struct ScreenContext: Equatable {
 
     let appName: String?
     let bundleIdentifier: String?
+    let processIdentifier: pid_t?
 
     // MARK: - Window
 
@@ -87,6 +88,9 @@ struct ScreenContext: Equatable {
 
         if let app = appName {
             parts.append("App: \(app)" + (bundleIdentifier.map { " (\($0))" } ?? ""))
+        }
+        if let processIdentifier {
+            parts.append("PID: \(processIdentifier)")
         }
         if let title = windowTitle {
             parts.append("Window: \(title)")

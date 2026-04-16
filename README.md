@@ -13,7 +13,7 @@ The day-one product is intentionally small. It is a menu-bar/background Mac app 
 Current branch:
 
 ```text
-codex/phasewise-mvp-implementation
+codex/phase-3-stub-reply-capsule-paste
 ```
 
 Current status:
@@ -22,14 +22,15 @@ Current status:
 Phase 0: Passed
 Phase 1: Passed
 Phase 2: Complete
-Next: Phase 3
+Phase 3: Implemented, manual smoke pending
+Next: Phase 4 after Phase 3 smoke passes
 ```
 
-This checkpoint proves the planning path, native app shell, fixed hotkey, placeholder capsule, Accessibility permission path, selected-text capture, compact product capsule preview, and rich debug context display.
+This checkpoint proves the planning path, native app shell, fixed hotkey, placeholder capsule, Accessibility permission path, selected-text capture, compact product capsule, separate debug context display, deterministic stub replies, draft editing, stub regeneration, and the paste service path.
 
-## This PR
+## This Phase
 
-This PR checkpoints Phases 0 through 2 into `main`.
+This branch implements Phase 3 on top of the Phase 2 product preview/debug split.
 
 Progress included:
 
@@ -45,35 +46,43 @@ Progress included:
 - Added app bundle creation with stable signing behavior for TCC continuity.
 - Added Phase 0, Phase 1, and Phase 2 reports under `docs/phase-reports/`.
 - Updated phase docs and repo-local automation guidance to match the current capture approach.
+- Added a deterministic non-AI stub reply generator.
+- Added product capsule keyboard handling for `Enter`, `Command + R`, and `Escape`.
+- Added a paste service for pasteboard backup, focus restore, synthetic paste, and pasteboard restore.
+- Added `docs/phase-reports/phase-3-stub-reply-capsule-and-paste.md`.
 
-Validation for this checkpoint:
+Validation for this branch:
 
 - `make build`
 - `make test`
 
+Manual smoke still required:
+
+- Grant Accessibility again if macOS asks after the re-signed build.
+- Run the Phase 3 Notes smoke test from `docs/phase-reports/phase-3-stub-reply-capsule-and-paste.md`.
+
 ## Next PR
 
-Next PR should execute:
+Next implementation PR should execute Phase 4 only after Phase 3 manual smoke passes:
 
 ```text
-docs/phases/phase-3-stub-reply-capsule-and-paste.md
+docs/phases/phase-4-gemini-generation-service.md
 ```
 
 Goal:
 
 ```text
-selected text -> stub reply -> edit in capsule -> paste into active app
+selected text -> one Gemini reply in the capsule
 ```
 
 Expected work:
 
-- Replace the Phase 2 product preview text with a deterministic stub reply.
-- Keep the capsule draft editable and route it into the paste flow.
-- Add keyboard handling for `Enter`, `Command + R`, and `Escape`.
-- Restore focus to the previous app before paste.
-- Paste the final capsule text into the active field.
-- Restore clipboard best-effort after paste.
-- Write `docs/phase-reports/phase-3-stub-reply-capsule-and-paste.md`.
+- Add Gemini API request construction with `URLSession`.
+- Read `GEMINI_API_KEY` or local developer config.
+- Replace deterministic stub reply with one generated reply.
+- Keep the existing capsule edit/paste behavior.
+- Preserve the debug inspector for context inspection.
+- Write `docs/phase-reports/phase-4-gemini-generation-service.md`.
 
 ## Remaining MVP PR Queue
 
@@ -81,9 +90,10 @@ Use one phase per PR unless the scope is explicitly changed.
 
 | PR | Phase | Goal |
 | --- | --- | --- |
-| Current | Phases 0-2 | Planning, app shell, hotkey, selected text, rich context |
-| Next | Phase 3 | Stub reply capsule and paste into active app |
-| Later | Phase 4 | Gemini generation service |
+| Merged | Phases 0-2 base | Planning, app shell, hotkey, selected text, rich context |
+| Pending | Phase 2 addition | Product capsule preview and separate debug inspector |
+| Current | Phase 3 | Stub reply capsule and paste into active app, based on the Phase 2 addition |
+| Next | Phase 4 | Gemini generation service |
 | Later | Phase 5 | Local learning store and visible learned label |
 | Later | Phase 6 | Regenerate from edited draft with `Command + R` |
 | Later | Phase 7 | MVP hardening and demo candidate |
