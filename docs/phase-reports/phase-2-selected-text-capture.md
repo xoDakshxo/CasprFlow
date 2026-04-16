@@ -1,101 +1,60 @@
-# Phase 2 Report: Selected Text Capture
+# Phase 2 Report: Selected Text Capture + Rich Screen Context
 
-Status: Automated checks passed; manual selection validation pending
+Status: **Complete** — selection capture and rich context working across native and Electron apps.
 
 ## Summary
 
-- What changed:
-  - Added `SelectionCaptureService`.
-  - Added Accessibility-first selected-text capture for native focused text controls.
-  - Added copy-based selected-text capture using synthetic `Command + C` as a fallback.
-  - Added pasteboard `changeCount` validation so stale clipboard text is not treated as selected text.
-  - Added a short hotkey-release delay before fallback copy to avoid sending `Option + Command + C`.
-  - Added best-effort pasteboard item save/restore.
-  - Added `SelectionTextNormalizer`.
-  - Updated the hotkey flow to show selected text in the capsule.
-  - Added empty-selection and permission-needed capsule states.
-- What now works:
-  - Pressing the fixed hotkey runs the selection capture path before showing the capsule.
-  - Selected text is normalized before display.
-  - If fallback copy does not update the pasteboard, the app shows the empty-selection state instead of the last copied clipboard value.
-  - Empty selected text resolves to `Highlight a message first.`
-  - `make test` validates string cleanup behavior and Phase 1 invariants.
-- What was intentionally skipped:
-  - No Gemini generation.
-  - No editable reply field.
-  - No paste flow.
-  - No local learning.
-  - No app-specific accessibility text extraction beyond generic focused-element selected text.
+### What changed
+- **`ScreenContext.swift`** (new): Rich model carrying everything AX APIs can provide — app info, all window titles, focused element metadata, full element value, surrounding text, and a flattened visible UI tree. Includes `aiDescription` for LLM consumption.
+- **`SelectionCaptureService.swift`**: Three-tier selection capture (AX direct → AX range → clipboard fallback). AX tree walker scrapes the focused window's children (depth 6, max 80 elements). Logging moved to `os.log` with opt-in file logging via `CASPRFLOW_DEBUG=1`.
+- **`ReplyCapsuleController.swift`**: Capsule UI shows selected text, before/after context, document URL, and collapsible metadata section with element role/subrole/description/identifier. Expandable "More" for long text sections.
+- **`AppCoordinator.swift`**: Prompts for Accessibility on launch if not trusted. Routes to `showContext()` for rich display.
+- **`Scripts/create_app_bundle.sh`**: Hash-based signing — tracks binary SHA-256, only re-signs when binary changes. Preserves TCC permissions across rebuilds.
 
-## Checks
+### What works
+- **Notes**: AX direct selection + full surrounding text + AX tree of visible UI
+- **Warp**: Clipboard fallback via osascript. AX tree shows terminal UI structure.
+- **Slack**: Clipboard fallback via osascript. Window title captured.
+- **GitHub Desktop**: Clipboard fallback. Window title captured.
+- **Activity Monitor**: Clipboard fallback works.
+- **Empty selection**: Shows "Highlight a message first."
+- **No Accessibility**: Shows "Accessibility needed" and prompts on launch.
 
-- Build:
-  - Passed: `make build`
-- Unit tests:
-  - Passed: `make test`
-  - Coverage includes:
-    - nil selected text
-    - whitespace-only selected text
-    - trimming selected text
-    - preserving multiline selected text
-    - default hotkey descriptor
-    - reply capsule construction
-    - Carbon hotkey registration/unregistration
-- Manual smoke:
-  - Not directly automated: the true Notes selection/hotkey smoke test requires manual user validation because this environment cannot send `Option + Space` via System Events.
-- Docs/skills:
-  - Phase remained within scope: selected-text capture only; no generation, paste, learning, or hotkey picker.
+### Clipboard fallback chain
+1. **osascript subprocess**: `tell application "System Events" to keystroke "c" using command down` — most reliable across Electron/Warp/native
+2. **CGEvent**: `CGEvent` with `.privateState` source, posted to `.cgSessionEventTap` — fallback for apps that don't respond to osascript
+3. Both methods save/restore clipboard via `pasteboardItems` backup
 
-## Evidence
+### AX tree walking
+- Starts at focused window, recurses through `kAXChildrenAttribute`
+- Depth-limited to 6 levels, capped at 80 elements
+- Skips layout containers (AXGroup, AXSplitGroup, etc.) unless they have labels
+- Captures: role, title/description (as label), value (truncated to 300 chars), identifier
 
-- Commands run:
-  - `make build`
-  - `make test`
-- Files changed:
-  - `Sources/CasprFlowChecks/main.swift`
-  - `Sources/CasprFlowCore/AppCoordinator.swift`
-  - `Sources/CasprFlowCore/SelectionCaptureService.swift`
-  - `Sources/CasprFlowCore/SelectionTextNormalizer.swift`
-  - `docs/phase-reports/phase-2-selected-text-capture.md`
+### Key fixes during development
+- **TCC invalidation**: Ad-hoc signing generated new CDHash each build. Fixed with hash-based script.
+- **Focused element fallback**: `focusedElement()` now tries app-level first, then system-wide AX always.
+- **osascript blocking MainActor**: Wrapped in `withCheckedContinuation` + `DispatchQueue.global`.
+- **Option key leaking into Cmd+C**: Switched to `.privateState` CGEvent source (clean flags).
 
-## Manual Validation Needed
+## Files changed
+- `Sources/CasprFlowCore/ScreenContext.swift` (new)
+- `Sources/CasprFlowCore/SelectionCaptureService.swift`
+- `Sources/CasprFlowCore/ReplyCapsuleController.swift`
+- `Sources/CasprFlowCore/AppCoordinator.swift`
+- `Scripts/create_app_bundle.sh`
 
-Run this locally:
-
-1. Build and launch:
-
+## Build
 ```sh
-make build
-make run
+sh Scripts/create_app_bundle.sh
+open .build/CasprFlow.app
 ```
 
-2. Open Notes.
-3. Put a sentinel value on the clipboard:
-
+For verbose logging:
 ```sh
-printf 'OLD_CLIPBOARD_SENTINEL' | pbcopy
+CASPRFLOW_DEBUG=1 .build/CasprFlow.app/Contents/MacOS/CasprFlow
 ```
 
-4. Type or find:
-
-```text
-Can you send me the project update by tonight?
-```
-
-5. Highlight that sentence.
-6. Press and release `Option + Space`.
-7. Confirm the capsule title is `Selected message`.
-8. Confirm the capsule shows the selected text, not `OLD_CLIPBOARD_SENTINEL`.
-9. Press `Escape`.
-10. Trigger with no selected text.
-11. Confirm the capsule says `Highlight a message first.`
-
-## Known Issues
-
-- If Accessibility is not trusted, the capsule can show `Accessibility needed`. Grant `.build/CasprFlow.app` in System Settings -> Privacy & Security -> Accessibility.
-- Some apps may not expose selected text through Accessibility and may block synthetic copy. In those cases the app now fails closed with `Highlight a message first.` rather than showing stale clipboard content.
-- Multiple instances can be launched with `open -n`; use `make run` for normal validation.
-
-## Next Phase Prompt
+## Next Phase
 
 Use the repo-local CasprFlow skills and execute docs/phases/phase-3-stub-reply-capsule-and-paste.md. Complete only that phase, run its checks, write the phase report, commit the phase, and stop.
