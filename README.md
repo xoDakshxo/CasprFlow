@@ -25,7 +25,7 @@ Phase 2: Complete
 Next: Phase 3
 ```
 
-This checkpoint proves the planning path, native app shell, fixed hotkey, placeholder capsule, Accessibility permission path, selected-text capture, and rich screen context display.
+This checkpoint proves the planning path, native app shell, fixed hotkey, placeholder capsule, Accessibility permission path, selected-text capture, compact product capsule preview, and rich debug context display.
 
 ## This PR
 
@@ -40,6 +40,7 @@ Progress included:
 - Added Accessibility permission checks and menu state.
 - Added selected-text capture through Accessibility APIs with range fallback and clipboard fallback.
 - Added rich screen context capture for focused app, windows, element metadata, surrounding text, full element value, and visible UI tree.
+- Split Phase 2 UI into two windows: a compact product capsule preview and the rough debug context inspector.
 - Added command-line build and check targets through `make build` and `make test`.
 - Added app bundle creation with stable signing behavior for TCC continuity.
 - Added Phase 0, Phase 1, and Phase 2 reports under `docs/phase-reports/`.
@@ -66,8 +67,8 @@ selected text -> stub reply -> edit in capsule -> paste into active app
 
 Expected work:
 
-- Replace raw selected-context display with a deterministic stub reply.
-- Make the capsule draft directly editable.
+- Replace the Phase 2 product preview text with a deterministic stub reply.
+- Keep the capsule draft editable and route it into the paste flow.
 - Add keyboard handling for `Enter`, `Command + R`, and `Escape`.
 - Restore focus to the previous app before paste.
 - Paste the final capsule text into the active field.

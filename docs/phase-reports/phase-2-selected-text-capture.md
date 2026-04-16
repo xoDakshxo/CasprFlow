@@ -1,18 +1,21 @@
 # Phase 2 Report: Selected Text Capture + Rich Screen Context
 
-Status: **Complete** — selection capture and rich context working across native and Electron apps.
+Status: **Complete** — selection capture, product UI preview, and rich debug context working across native and Electron apps.
 
 ## Summary
 
 ### What changed
 - **`ScreenContext.swift`** (new): Rich model carrying everything AX APIs can provide — app info, all window titles, focused element metadata, full element value, surrounding text, and a flattened visible UI tree. Includes `aiDescription` for LLM consumption.
 - **`SelectionCaptureService.swift`**: Three-tier selection capture (AX direct → AX range → clipboard fallback). AX tree walker scrapes the focused window's children (depth 6, max 80 elements). Logging moved to `os.log` with opt-in file logging via `CASPRFLOW_DEBUG=1`.
-- **`ReplyCapsuleController.swift`**: 480x520 capsule with scrollable, collapsible sections: Selected Text, Before/After context, Full Element Text (up to 2000 chars), Windows list with focus indicator, Visible UI tree (indented AX roles/labels/values), Metadata (role/subrole/description/identifier/bundle/document URL), and AI Description (full structured text dump for LLM).
+- **`ReplyCapsuleController.swift`**: Split the hotkey result into two windows:
+  - a 420x216 product capsule preview for judging the real MVP UI direction
+  - a 480x520 debug context inspector with scrollable, collapsible sections: Selected Text, Before/After context, Full Element Text (up to 2000 chars), Windows list with focus indicator, Visible UI tree (indented AX roles/labels/values), Metadata (role/subrole/description/identifier/bundle/document URL), and AI Description (full structured text dump for LLM).
 - **`AppCoordinator.swift`**: Prompts for Accessibility on launch if not trusted. Routes to `showContext()` for rich display.
 - **`Scripts/create_app_bundle.sh`**: Hash-based signing — tracks binary SHA-256, only re-signs when binary changes. Preserves TCC permissions across rebuilds.
 
 ### What works
 - **Notes**: AX direct selection + full surrounding text + AX tree of visible UI
+- **Product preview**: Opens as a separate compact capsule seeded from selected text while keeping the rough debug inspector available.
 - **Warp**: Clipboard fallback via osascript. AX tree shows terminal UI structure.
 - **Slack**: Clipboard fallback via osascript. Window title captured.
 - **GitHub Desktop**: Clipboard fallback. Window title captured.
@@ -49,6 +52,12 @@ Status: **Complete** — selection capture and rich context working across nativ
 sh Scripts/create_app_bundle.sh
 open .build/CasprFlow.app
 ```
+
+Current Phase 2 UI behavior:
+
+- Selected capture shows the compact product capsule preview and the debug context inspector at the same time.
+- Empty selection and permission states only show the compact capsule state.
+- Paste, Gemini generation, learning, and `Command + R` behavior remain Phase 3+ work.
 
 For verbose logging:
 ```sh
