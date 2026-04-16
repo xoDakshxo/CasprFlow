@@ -23,6 +23,11 @@ final class AppCoordinator {
             }
         )
 
+        // Prompt for accessibility on launch if not trusted
+        if !permissionService.isTrusted {
+            permissionService.requestAccess()
+        }
+
         registerHotkey()
     }
 
@@ -60,11 +65,11 @@ final class AppCoordinator {
     }
 
     private func captureSelectionAndShowCapsule() async {
-        let result = await selectionCaptureService.captureSelectedText()
-        NSLog("[CasprFlow] Capture result: %@", String(describing: result))
-        switch result {
-        case .selected(let text):
-            capsuleController.show(title: "Selected message", message: text)
+        let context = await selectionCaptureService.captureContext()
+        NSLog("[CasprFlow] Capture result: %@", String(describing: context.captureResult))
+        switch context.captureResult {
+        case .selected:
+            capsuleController.showContext(context)
         case .empty:
             capsuleController.show(title: "CasprFlow", message: "Highlight a message first.")
         case .permissionRequired:
