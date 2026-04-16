@@ -7,7 +7,7 @@ Status: **Complete** — selection capture and rich context working across nativ
 ### What changed
 - **`ScreenContext.swift`** (new): Rich model carrying everything AX APIs can provide — app info, all window titles, focused element metadata, full element value, surrounding text, and a flattened visible UI tree. Includes `aiDescription` for LLM consumption.
 - **`SelectionCaptureService.swift`**: Three-tier selection capture (AX direct → AX range → clipboard fallback). AX tree walker scrapes the focused window's children (depth 6, max 80 elements). Logging moved to `os.log` with opt-in file logging via `CASPRFLOW_DEBUG=1`.
-- **`ReplyCapsuleController.swift`**: Capsule UI shows selected text, before/after context, document URL, and collapsible metadata section with element role/subrole/description/identifier. Expandable "More" for long text sections.
+- **`ReplyCapsuleController.swift`**: 480x520 capsule with scrollable, collapsible sections: Selected Text, Before/After context, Full Element Text (up to 2000 chars), Windows list with focus indicator, Visible UI tree (indented AX roles/labels/values), Metadata (role/subrole/description/identifier/bundle/document URL), and AI Description (full structured text dump for LLM).
 - **`AppCoordinator.swift`**: Prompts for Accessibility on launch if not trusted. Routes to `showContext()` for rich display.
 - **`Scripts/create_app_bundle.sh`**: Hash-based signing — tracks binary SHA-256, only re-signs when binary changes. Preserves TCC permissions across rebuilds.
 

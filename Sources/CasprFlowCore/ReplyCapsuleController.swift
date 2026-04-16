@@ -45,7 +45,7 @@ final class ReplyCapsuleController {
 
     func showContext(_ context: ScreenContext) {
         currentContext = context
-        let size = NSSize(width: 420, height: 360)
+        let size = NSSize(width: 480, height: 520)
         hostingView.rootView = AnyView(ContextCapsuleView(context: context))
         hostingView.frame = NSRect(origin: .zero, size: size)
         panel.setContentSize(size)
@@ -125,16 +125,21 @@ struct ContextCapsuleView: View {
     @State private var isBeforeExpanded = false
     @State private var isSelectedExpanded = false
     @State private var isAfterExpanded = false
+    @State private var isFullValueExpanded = false
+    @State private var isVisibleUIExpanded = false
+    @State private var isMetadataExpanded = false
+    @State private var isWindowsExpanded = false
+    @State private var isAIDescExpanded = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 // Header: app + window
                 contextHeader
 
                 Divider().opacity(0.3)
 
-                // Selected text section
+                // Selected text
                 if let selected = context.selectedText {
                     contextSection(
                         label: "Selected Text",
@@ -164,16 +169,103 @@ struct ContextCapsuleView: View {
                     )
                 }
 
-                // Metadata section
-                metadataSection
+                // Full element value
+                if let fullVal = context.fullElementValue, !fullVal.isEmpty {
+                    contextSection(
+                        label: "Full Element Text (\(fullVal.count) chars)",
+                        text: fullVal,
+                        isExpanded: $isFullValueExpanded,
+                        color: .secondary
+                    )
+                }
+
+                // All windows
+                if context.allWindows.count > 0 {
+                    collapsibleSection(
+                        label: "Windows (\(context.allWindows.count))",
+                        isExpanded: $isWindowsExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(Array(context.allWindows.enumerated()), id: \.offset) { _, win in
+                                HStack(spacing: 4) {
+                                    Text(win.isFocused ? "●" : "○")
+                                        .font(.system(size: 8))
+                                        .foregroundColor(win.isFocused ? .blue : .gray)
+                                    Text(win.title)
+                                        .font(.system(size: 11))
+                                        .foregroundColor(win.isFocused ? .primary : .secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Visible UI tree
+                if !context.visibleElements.isEmpty {
+                    collapsibleSection(
+                        label: "Visible UI (\(context.visibleElements.count) elements)",
+                        isExpanded: $isVisibleUIExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            ForEach(Array(context.visibleElements.enumerated()), id: \.offset) { _, el in
+                                HStack(spacing: 0) {
+                                    Text(String(repeating: "  ", count: el.depth))
+                                        .font(.system(size: 9, design: .monospaced))
+                                    Text(el.role)
+                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                        .foregroundStyle(.blue.opacity(0.8))
+                                    if let label = el.label {
+                                        Text(" \(label)")
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundStyle(.primary)
+                                            .lineLimit(1)
+                                    } else if let value = el.value {
+                                        Text(" \(String(value.prefix(60)))")
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                        }
+                        .textSelection(.enabled)
+                    }
+                }
+
+                // Metadata
+                collapsibleSection(
+                    label: "Metadata",
+                    isExpanded: $isMetadataExpanded
+                ) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        metadataRow("Role", context.focusedElementRole)
+                        metadataRow("Subrole", context.focusedElementSubrole)
+                        metadataRow("Description", context.elementDescription)
+                        metadataRow("Identifier", context.elementIdentifier)
+                        metadataRow("Bundle", context.bundleIdentifier)
+                        metadataRow("Document", context.documentURL)
+                    }
+                }
+
+                // AI Description dump
+                collapsibleSection(
+                    label: "AI Description",
+                    isExpanded: $isAIDescExpanded
+                ) {
+                    Text(context.aiDescription)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
 
                 Text("Esc to close")
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
             }
-            .padding(16)
+            .padding(14)
         }
-        .frame(width: 420, height: 360)
+        .frame(width: 480, height: 520)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
@@ -182,8 +274,10 @@ struct ContextCapsuleView: View {
         )
     }
 
+    // MARK: - Subviews
+
     private var contextHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 if let appName = context.appName {
                     Text(appName)
@@ -200,7 +294,7 @@ struct ContextCapsuleView: View {
 
             if let windowTitle = context.windowTitle {
                 Text(windowTitle)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
@@ -215,35 +309,31 @@ struct ContextCapsuleView: View {
         }
     }
 
-    @State private var isMetadataExpanded = false
-
-    private var metadataSection: some View {
+    private func collapsibleSection<Content: View>(
+        label: String,
+        isExpanded: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Button(action: { isMetadataExpanded.toggle() }) {
+            Button(action: { isExpanded.wrappedValue.toggle() }) {
                 HStack(spacing: 4) {
-                    Text("Metadata")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                    Text(isMetadataExpanded ? "▾" : "▸")
+                    Text(isExpanded.wrappedValue ? "▾" : "▸")
                         .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                    Text(label)
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.tertiary)
                 }
             }
             .buttonStyle(.plain)
 
-            if isMetadataExpanded {
-                VStack(alignment: .leading, spacing: 2) {
-                    metadataRow("Role", context.focusedElementRole)
-                    metadataRow("Subrole", context.focusedElementSubrole)
-                    metadataRow("Description", context.elementDescription)
-                    metadataRow("Identifier", context.elementIdentifier)
-                    metadataRow("Bundle", context.bundleIdentifier)
-                }
-                .padding(6)
-                .background(
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(.primary.opacity(0.03))
-                )
+            if isExpanded.wrappedValue {
+                content()
+                    .padding(6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(.primary.opacity(0.03))
+                    )
             }
         }
     }
@@ -291,7 +381,7 @@ struct ContextCapsuleView: View {
             }
 
             Text(text)
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .foregroundStyle(color)
                 .lineLimit(isExpanded.wrappedValue ? nil : 3)
                 .textSelection(.enabled)

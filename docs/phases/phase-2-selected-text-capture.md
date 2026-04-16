@@ -28,6 +28,15 @@ The captured `ScreenContext` is structured for AI consumption, with an `aiDescri
 - Visible UI tree: depth-limited (6 levels), capped (80 elements) walk of the focused window's AX children, extracting roles, labels, values, and identifiers
 - AI-friendly dump: `ScreenContext.aiDescription` concatenates everything into structured text
 
+### Capsule UI
+- 480x520 floating panel with scrollable, collapsible sections
+- Selected Text / Before / After — expandable with "More" for long text
+- Full Element Text — full value of focused field (up to 2000 chars)
+- Windows — all open windows with focus indicator (● focused, ○ others)
+- Visible UI — indented AX tree showing roles, labels, values
+- Metadata — role, subrole, description, identifier, bundle, document URL
+- AI Description — full structured text dump ready for LLM consumption
+
 ### Logging
 - `os.log` (Logger) for all capture events — visible in Console.app under `com.casprflow.CasprFlow`
 - Verbose file logging (`~/.casprflow-debug.log`) opt-in via `CASPRFLOW_DEBUG=1` environment variable
