@@ -1,6 +1,6 @@
 ---
 name: casprflow-macos-automation
-description: Implement or debug CasprFlow native macOS automation. Use for AppKit/SwiftUI menu-bar behavior, fixed global hotkey registration, selected-text capture, clipboard preservation, Accessibility/Input Monitoring permissions, focus restoration, synthetic copy/paste, borderless reply capsule windows, and paste-into-active-app bugs.
+description: Implement or debug CasprFlow native macOS automation. Use for AppKit/SwiftUI menu-bar behavior, fixed global hotkey registration, selected-text capture, clipboard preservation, Accessibility/Input Monitoring permissions, focus restoration, synthetic paste, borderless reply capsule windows, and paste-into-active-app bugs.
 ---
 
 # CasprFlow macOS Automation
@@ -16,8 +16,9 @@ Use this skill for the OS-facing pieces of CasprFlow. Keep it focused on native 
 - Run as a menu-bar/background app.
 - Use `NSStatusItem` for the menu.
 - Use `NSPanel` for the reply capsule.
-- Use `NSPasteboard` for selected-text capture and final paste.
-- Use synthetic `Command + C` and `Command + V` pragmatically.
+- Use Accessibility APIs for selected-text capture.
+- Use `NSPasteboard` only for final paste fallback.
+- Use synthetic `Command + V` pragmatically.
 - Save the previous active app before opening the capsule.
 - Return focus before paste.
 - Restore clipboard best-effort; do not block the MVP on perfect clipboard restoration.
@@ -36,14 +37,13 @@ MVP uses a fixed hotkey:
 
 Use this flow:
 
-1. Store current pasteboard string if available.
-2. Send synthetic `Command + C`.
-3. Wait briefly for pasteboard update.
-4. Read selected text.
-5. Restore prior pasteboard string best-effort.
-6. If selected text is empty, show the capsule with `Highlight a message first.`
+1. Capture the frontmost app's focused accessibility element.
+2. Read `kAXSelectedTextAttribute`.
+3. If needed, derive selected text from `kAXValueAttribute` plus `kAXSelectedTextRangeAttribute`.
+4. Do not use `Command + C` or `NSPasteboard` to read selected text.
+5. If selected text is empty, show the capsule with `Highlight a message first.`
 
-Do not attempt app-specific accessibility text extraction in the MVP.
+Use `.casprflow-temp/axii/Axii/Services/Paste/FocusSnapshot.swift` as the local reference for this pattern.
 
 ## Reply Capsule
 
@@ -98,5 +98,6 @@ If hotkey works but paste fails:
 If capture returns empty:
 
 - verify text was selected
-- increase the pasteboard wait slightly
-- ensure clipboard restoration is not running before reading selection
+- verify Accessibility permission
+- inspect the focused element role/value/range path
+- do not add clipboard-based copy capture without explicit approval

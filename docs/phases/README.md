@@ -7,6 +7,8 @@
 
 Use this folder as the execution queue. Each phase is a separate file so Codex can run one phase, write its report, and stop.
 
+Use `docs/phase-audits/` for audit and decision-record documents created by phases.
+
 ## Phase Index
 
 | Phase | File | Result |
@@ -143,4 +145,3 @@ Use the repo-local CasprFlow skills and execute docs/phases/phase-N+1-name.md. C
 - No cloud memory.
 - No model training.
 - No phase can be marked passed without evidence.
-
