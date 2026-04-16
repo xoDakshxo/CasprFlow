@@ -3,27 +3,46 @@ import SwiftUI
 
 @MainActor
 final class ReplyCapsuleController {
-    private let panel: ReplyCapsulePanel
-    private let hostingView: NSHostingView<AnyView>
+    private let productPanel: ReplyCapsulePanel
+    private let debugPanel: ReplyCapsulePanel
+    private let productHostingView: NSHostingView<AnyView>
+    private let debugHostingView: NSHostingView<AnyView>
     private var currentContext: ScreenContext?
+
     init() {
-        let contentSize = NSSize(width: 420, height: 360)
-        panel = ReplyCapsulePanel(
-            contentRect: NSRect(origin: .zero, size: contentSize),
+        let productSize = NSSize(width: 420, height: 216)
+        let debugSize = NSSize(width: 480, height: 520)
+
+        productPanel = Self.makePanel(size: productSize)
+        debugPanel = Self.makePanel(size: debugSize)
+
+        productHostingView = NSHostingView(
+            rootView: AnyView(ReplyCapsulePlaceholderView(title: "CasprFlow", message: "Ready."))
+        )
+        productHostingView.frame = NSRect(origin: .zero, size: productSize)
+
+        debugHostingView = NSHostingView(
+            rootView: AnyView(DebugContextPlaceholderView())
+        )
+        debugHostingView.frame = NSRect(origin: .zero, size: debugSize)
+
+        productPanel.contentView = productHostingView
+        debugPanel.contentView = debugHostingView
+
+        let hideAll: () -> Void = { [weak self] in
+            self?.hide()
+        }
+        productPanel.onEscape = hideAll
+        debugPanel.onEscape = hideAll
+    }
+
+    private static func makePanel(size: NSSize) -> ReplyCapsulePanel {
+        let panel = ReplyCapsulePanel(
+            contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.nonactivatingPanel, .borderless],
             backing: .buffered,
             defer: false
         )
-
-        hostingView = NSHostingView(
-            rootView: AnyView(ReplyCapsulePlaceholderView(title: "CasprFlow", message: "Ready."))
-        )
-        hostingView.frame = NSRect(origin: .zero, size: contentSize)
-
-        panel.contentView = hostingView
-        panel.onEscape = { [weak self] in
-            self?.hide()
-        }
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.backgroundColor = .clear
@@ -31,42 +50,82 @@ final class ReplyCapsuleController {
         panel.hasShadow = true
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
+        return panel
     }
 
     func show(title: String, message: String) {
         currentContext = nil
         let size = NSSize(width: 360, height: 132)
-        hostingView.rootView = AnyView(ReplyCapsulePlaceholderView(title: title, message: message))
-        hostingView.frame = NSRect(origin: .zero, size: size)
-        panel.setContentSize(size)
-        positionNearTopCenter()
-        panel.orderFrontRegardless()
+        debugPanel.orderOut(nil)
+        productHostingView.rootView = AnyView(ReplyCapsulePlaceholderView(title: title, message: message))
+        productHostingView.frame = NSRect(origin: .zero, size: size)
+        productPanel.setContentSize(size)
+        positionProductPanel()
+        productPanel.orderFrontRegardless()
     }
 
     func showContext(_ context: ScreenContext) {
         currentContext = context
-        let size = NSSize(width: 480, height: 520)
-        hostingView.rootView = AnyView(ContextCapsuleView(context: context))
-        hostingView.frame = NSRect(origin: .zero, size: size)
-        panel.setContentSize(size)
-        positionNearTopCenter()
-        panel.orderFrontRegardless()
+
+        let productSize = NSSize(width: 420, height: 216)
+        productHostingView.rootView = AnyView(ProductReplyCapsulePreviewView(context: context))
+        productHostingView.frame = NSRect(origin: .zero, size: productSize)
+        productPanel.setContentSize(productSize)
+        positionProductPanel()
+        productPanel.orderFrontRegardless()
+
+        let debugSize = NSSize(width: 480, height: 520)
+        debugHostingView.rootView = AnyView(ContextCapsuleView(context: context))
+        debugHostingView.frame = NSRect(origin: .zero, size: debugSize)
+        debugPanel.setContentSize(debugSize)
+        positionDebugPanel()
+        debugPanel.orderFrontRegardless()
     }
 
     func hide() {
-        panel.orderOut(nil)
+        productPanel.orderOut(nil)
+        debugPanel.orderOut(nil)
     }
 
-    private func positionNearTopCenter() {
+    private func positionProductPanel() {
         guard let screen = NSScreen.main else { return }
         let margin: CGFloat = 84
-        let size = panel.frame.size
+        let size = productPanel.frame.size
         let frame = screen.visibleFrame
         let origin = NSPoint(
             x: frame.midX - size.width / 2,
             y: frame.maxY - size.height - margin
         )
-        panel.setFrame(NSRect(origin: origin, size: size), display: false)
+        productPanel.setFrame(NSRect(origin: origin, size: size), display: false)
+    }
+
+    private func positionDebugPanel() {
+        guard let screen = NSScreen.main else { return }
+
+        let spacing: CGFloat = 16
+        let inset: CGFloat = 16
+        let frame = screen.visibleFrame
+        let productFrame = productPanel.frame
+        let debugSize = debugPanel.frame.size
+
+        var origin = NSPoint(
+            x: productFrame.maxX + spacing,
+            y: productFrame.maxY - debugSize.height
+        )
+
+        if origin.x + debugSize.width > frame.maxX - inset {
+            origin.x = productFrame.minX - spacing - debugSize.width
+        }
+
+        if origin.x < frame.minX + inset {
+            origin.x = frame.midX - debugSize.width / 2
+            origin.y = productFrame.minY - spacing - debugSize.height
+        }
+
+        origin.x = min(max(origin.x, frame.minX + inset), frame.maxX - debugSize.width - inset)
+        origin.y = min(max(origin.y, frame.minY + inset), frame.maxY - debugSize.height - inset)
+
+        debugPanel.setFrame(NSRect(origin: origin, size: debugSize), display: false)
     }
 }
 
@@ -117,6 +176,112 @@ struct ReplyCapsulePlaceholderView: View {
     }
 }
 
+// MARK: - Product capsule preview
+
+struct ProductReplyCapsulePreviewView: View {
+    let context: ScreenContext
+
+    @State private var draftText: String
+
+    init(context: ScreenContext) {
+        self.context = context
+        _draftText = State(initialValue: Self.previewDraft(for: context))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text("CasprFlow")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+
+                Text("product preview")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule()
+                            .fill(.primary.opacity(0.06))
+                    )
+
+                Spacer(minLength: 8)
+
+                if let appName = context.appName {
+                    Text(appName)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+            }
+
+            if let selected = context.selectedText {
+                Text("Replying to: \(selected)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            } else {
+                Text("Highlight a message first.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            TextEditor(text: $draftText)
+                .font(.system(size: 13))
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .frame(height: 86)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(.primary.opacity(0.05))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(.white.opacity(0.12), lineWidth: 1)
+                )
+
+            HStack {
+                Text("Preview only")
+                Spacer()
+                Text("Enter paste | Cmd+R regenerate | Esc")
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(.tertiary)
+        }
+        .padding(14)
+        .frame(width: 420, height: 216, alignment: .topLeading)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(.white.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private static func previewDraft(for context: ScreenContext) -> String {
+        guard let selected = context.selectedText, !selected.isEmpty else {
+            return "Select a message, then press Option + Space."
+        }
+
+        let trimmed = selected.replacingOccurrences(of: "\n", with: " ")
+        let preview = trimmed.count > 110 ? String(trimmed.prefix(110)) + "..." : trimmed
+        return "Draft preview for: \(preview)"
+    }
+}
+
+struct DebugContextPlaceholderView: View {
+    var body: some View {
+        Text("Debug context appears after selected text is captured.")
+            .font(.system(size: 12))
+            .foregroundStyle(.secondary)
+            .padding(14)
+            .frame(width: 480, height: 520, alignment: .topLeading)
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
 // MARK: - Rich context view
 
 struct ContextCapsuleView: View {
@@ -134,6 +299,10 @@ struct ContextCapsuleView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
+                Text("Debug Context")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+
                 // Header: app + window
                 contextHeader
 

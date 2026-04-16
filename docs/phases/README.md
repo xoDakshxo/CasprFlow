@@ -15,7 +15,7 @@ Use `docs/phase-audits/` for audit and decision-record documents created by phas
 | --- | --- | --- |
 | 0 | [phase-0-intake.md](phase-0-intake.md) | Implementation path chosen |
 | 1 | [phase-1-native-walking-skeleton.md](phase-1-native-walking-skeleton.md) | Native app shell, fixed hotkey, placeholder capsule |
-| 2 | [phase-2-selected-text-capture.md](phase-2-selected-text-capture.md) | Highlighted text reaches the app |
+| 2 | [phase-2-selected-text-capture.md](phase-2-selected-text-capture.md) | Highlighted text reaches the app, product preview and debug inspector render |
 | 3 | [phase-3-stub-reply-capsule-and-paste.md](phase-3-stub-reply-capsule-and-paste.md) | Full OS loop works without live AI |
 | 4 | [phase-4-gemini-generation-service.md](phase-4-gemini-generation-service.md) | Selected text becomes one Gemini reply |
 | 5 | [phase-5-local-learning-store.md](phase-5-local-learning-store.md) | Edits create visible local signals |
