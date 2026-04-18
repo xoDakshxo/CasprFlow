@@ -13,6 +13,15 @@ Reason:
 
 ## Verified Sources
 
+### macos-vision-ocr
+
+- Repo: `https://github.com/bytefer/macos-vision-ocr`
+- Local inspection path: `.casprflow-temp/macos-vision-ocr`
+- Inspected commit: `91a236a`
+- License file inspected: `.casprflow-temp/macos-vision-ocr/LICENSE`
+- License: MIT
+- Use: reference pattern for Apple Vision OCR request setup and structured output with text, confidence, and position data
+
 ### Axii
 
 - Repo: `https://github.com/bwarzecha/Axii`
@@ -93,6 +102,7 @@ If source code is copied or substantially adapted:
 - Keep Apache-2.0 license text available.
 - Add `THIRD_PARTY_NOTICES.md` before any public distribution.
 - Note copied/adapted files in the relevant phase report.
+- For `macos-vision-ocr`, keep MIT attribution because `LocalOCRService` intentionally adapts its Vision request/output shape.
 
 If only behavior is reimplemented after inspection:
 
@@ -105,4 +115,3 @@ Proceed with:
 **Build a clean CasprFlow app shell locally and port only narrow Axii OS mechanics as needed.**
 
 This keeps the MVP small while still saving time on the risky macOS integration work.
-

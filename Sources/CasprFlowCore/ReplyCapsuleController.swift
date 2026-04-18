@@ -70,7 +70,8 @@ final class ReplyCapsuleController {
         currentContext = context
 
         let productSize = NSSize(width: 420, height: 216)
-        let initialDraft = stubReplyGenerator.initialReply(for: context.promptContext.text)
+        let bundlePrompt = context.bundle.prompt
+        let initialDraft = stubReplyGenerator.initialReply(for: bundlePrompt)
         productHostingView.rootView = AnyView(
             ProductReplyCapsuleView(
                 context: context,
@@ -82,7 +83,7 @@ final class ReplyCapsuleController {
                 },
                 onRegenerate: { [stubReplyGenerator] currentDraft, attempt in
                     stubReplyGenerator.regeneratedReply(
-                        for: context.promptContext.text,
+                        for: bundlePrompt,
                         currentDraft: currentDraft,
                         attempt: attempt
                     )
@@ -273,8 +274,8 @@ struct ProductReplyCapsuleView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
-            } else if context.promptContext.hasUsableContext {
-                Text(Self.contextPreview(context.promptContext.text))
+            } else if !context.bundle.prompt.isEmpty {
+                Text(Self.contextPreview(context.bundle.prompt))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -435,7 +436,7 @@ private final class KeyHandlingTextView: NSTextView {
 
 struct DebugContextPlaceholderView: View {
     var body: some View {
-        Text("Debug context appears after selected text is captured.")
+        Text("Debug context appears after the hotkey captures the current window.")
             .font(.system(size: 12))
             .foregroundStyle(.secondary)
             .padding(14)
@@ -457,8 +458,14 @@ struct ContextCapsuleView: View {
     @State private var isVisibleUIExpanded = false
     @State private var isMetadataExpanded = false
     @State private var isWindowsExpanded = false
-    @State private var isAIDescExpanded = false
-    @State private var isPromptContextExpanded = true
+    @State private var isScreenshotExpanded = false
+    @State private var isOCRExpanded = false
+    @State private var isPromptContextExpanded = false
+    @State private var isSurfaceExpanded = true
+    @State private var isRecentExpanded = true
+    @State private var isBundleJSONExpanded = false
+
+    private var bundle: ScreenContextBundle { context.bundle }
 
     var body: some View {
         ScrollView {
@@ -473,16 +480,147 @@ struct ContextCapsuleView: View {
                 Divider().opacity(0.3)
 
                 collapsibleSection(
-                    label: "Prompt Context (\(context.promptContext.captureMode.rawValue), confidence \(String(format: "%.2f", context.promptContext.confidence)))",
+                    label: "Surface (\(bundle.surface.kind.rawValue), confidence \(String(format: "%.2f", bundle.confidence)))",
+                    isExpanded: $isSurfaceExpanded
+                ) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        metadataRow("Kind", bundle.surface.kind.rawValue)
+                        metadataRow("App", bundle.surface.appName)
+                        metadataRow("Bundle", bundle.surface.bundleId)
+                        metadataRow("Window", bundle.surface.windowTitle)
+                        metadataRow("Input focused", bundle.surface.isInputFocused ? "yes" : "no")
+                        if let focused = bundle.focused {
+                            metadataRow("Field role", focused.role)
+                            metadataRow("Field kind", focused.fieldKind.rawValue)
+                        }
+                    }
+                }
+
+                if !bundle.recent.isEmpty {
+                    collapsibleSection(
+                        label: "Recent (\(bundle.recent.count) blocks)",
+                        isExpanded: $isRecentExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(Array(bundle.recent.enumerated()), id: \.offset) { _, block in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 6) {
+                                        Text(block.source)
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundStyle(.green.opacity(0.85))
+                                        Text(String(format: "%.2f", block.confidence))
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundStyle(.blue.opacity(0.8))
+                                    }
+                                    Text(block.text)
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.primary)
+                                        .textSelection(.enabled)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                        .fill(.primary.opacity(0.04))
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if !bundle.ambient.isEmpty {
+                    collapsibleSection(
+                        label: "Ambient (\(bundle.ambient.count))",
+                        isExpanded: $isVisibleUIExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(Array(bundle.ambient.enumerated()), id: \.offset) { _, item in
+                                Text(item)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
+                    }
+                }
+
+                collapsibleSection(
+                    label: "Bundle JSON",
+                    isExpanded: $isBundleJSONExpanded
+                ) {
+                    Text(bundle.prettyJSON)
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                collapsibleSection(
+                    label: "AI Prompt (confidence \(String(format: "%.2f", bundle.confidence)), fallback=\(bundle.needsScreenshotFallback ? "yes" : "no"))",
                     isExpanded: $isPromptContextExpanded
                 ) {
                     VStack(alignment: .leading, spacing: 6) {
-                        metadataRow("Candidates", "\(context.promptContext.candidateCount)")
-                        metadataRow("Dropped", "\(context.promptContext.droppedCandidateCount)")
-                        Text(context.promptContext.hasUsableContext ? context.promptContext.text : "No usable prompt context.")
+                        metadataRow("Recent blocks", "\(bundle.recent.count)")
+                        metadataRow("Ambient", "\(bundle.ambient.count)")
+                        metadataRow("Dropped", "\(bundle.debug.droppedCount)")
+                        Text(bundle.prompt.isEmpty ? "No usable prompt." : bundle.prompt)
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
+                    }
+                }
+
+                if !context.screenshotMetadata.isEmpty {
+                    collapsibleSection(
+                        label: "Screenshots (\(context.screenshotMetadata.count))",
+                        isExpanded: $isScreenshotExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(Array(context.screenshotMetadata.enumerated()), id: \.offset) { _, screenshot in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    metadataRow("Source", screenshot.source)
+                                    metadataRow("Window ID", screenshot.windowID.map(String.init))
+                                    metadataRow("Size", "\(screenshot.width)x\(screenshot.height)")
+                                }
+                            }
+                            Text("Image is used for local OCR only and is not retained.")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+
+                if !context.ocrTextCandidates.isEmpty {
+                    collapsibleSection(
+                        label: "OCR Text (\(context.ocrTextCandidates.count) candidates)",
+                        isExpanded: $isOCRExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(Array(context.ocrTextCandidates.prefix(30).enumerated()), id: \.offset) { _, candidate in
+                                VStack(alignment: .leading, spacing: 1) {
+                                    HStack(spacing: 6) {
+                                        Text(candidate.source)
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundStyle(.green.opacity(0.85))
+                                            .frame(width: 110, alignment: .leading)
+                                        Text(String(format: "%.2f", candidate.confidence))
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundStyle(.blue.opacity(0.8))
+                                            .frame(width: 34, alignment: .leading)
+                                        Text(Self.normalizedRectDescription(candidate.boundingBox))
+                                            .font(.system(size: 9, design: .monospaced))
+                                            .foregroundStyle(.tertiary)
+                                            .lineLimit(1)
+                                    }
+                                    Text(candidate.text)
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                        .textSelection(.enabled)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                        .textSelection(.enabled)
                     }
                 }
 
@@ -595,17 +733,6 @@ struct ContextCapsuleView: View {
                     }
                 }
 
-                // AI Description dump
-                collapsibleSection(
-                    label: "AI Description",
-                    isExpanded: $isAIDescExpanded
-                ) {
-                    Text(context.aiDescription)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                }
-
                 Text("Esc to close")
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
@@ -701,6 +828,14 @@ struct ContextCapsuleView: View {
                 }
             }
         }
+    }
+
+    private static func normalizedRectDescription(_ rect: NormalizedRect) -> String {
+        let x = String(format: "%.2f", rect.x)
+        let y = String(format: "%.2f", rect.y)
+        let width = String(format: "%.2f", rect.width)
+        let height = String(format: "%.2f", rect.height)
+        return "x:\(x) y:\(y) w:\(width) h:\(height)"
     }
 
     private func contextSection(

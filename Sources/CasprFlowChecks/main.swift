@@ -27,6 +27,21 @@ expect(PhaseThreeSelfCheck.pasteServiceRejectsEmptyText(), "paste service reject
 expect(PhaseThreeSelfCheck.pasteServiceKeepsUserTextUntrimmed(), "paste service keeps user text untrimmed")
 expect(PhaseThreeSelfCheck.promptContextWorksWithoutSelection(), "prompt context works without selection")
 expect(PhaseThreeSelfCheck.promptContextDropsChrome(), "prompt context drops chrome")
+expect(PhaseThreeSelfCheck.promptContextUsesOCRWithoutAX(), "prompt context uses OCR without AX")
+
+expect(PhaseFourSelfCheck.surfaceClassifierDetectsSlack(), "surface classifier detects Slack as chat")
+expect(PhaseFourSelfCheck.surfaceClassifierDetectsCode(), "surface classifier detects code IDEs")
+expect(PhaseFourSelfCheck.surfaceClassifierDetectsCasual(), "surface classifier detects Messages as casual")
+expect(PhaseFourSelfCheck.surfaceClassifierFallsBackToOther(), "surface classifier falls back to other")
+expect(PhaseFourSelfCheck.ocrGroupingMergesAdjacentLines(), "OCR grouping merges adjacent lines")
+expect(PhaseFourSelfCheck.bundleIncludesGroupedRecentBlock(), "bundle includes grouped recent block")
+expect(PhaseFourSelfCheck.bundleExcludesChromeAmbient(), "bundle excludes chrome from prompt")
+expect(PhaseFourSelfCheck.confidenceLadderSelectionWins(), "confidence ladder: selection -> 1.00")
+expect(PhaseFourSelfCheck.confidenceLadderFocusedFieldPlusRecent(), "confidence ladder: focused field + recent -> 0.85")
+expect(PhaseFourSelfCheck.confidenceLadderInputFocusedPlusRecent(), "confidence ladder: input focused + recent -> 0.70")
+expect(PhaseFourSelfCheck.confidenceLadderAmbientOnlyTriggersFallback(), "confidence ladder: ambient only -> 0.30 + fallback")
+expect(PhaseFourSelfCheck.confidenceLadderEmptyTriggersFallback(), "confidence ladder: empty -> 0.00 + fallback")
+expect(PhaseFourSelfCheck.bundleRoundtripsAsJSON(), "bundle round-trips through JSON")
 
 Task { @MainActor in
     expect(PhaseOneSelfCheck.canCreateReplyCapsule(), "reply capsule construction")

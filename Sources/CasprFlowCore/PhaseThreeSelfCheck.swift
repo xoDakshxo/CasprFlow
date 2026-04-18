@@ -36,7 +36,8 @@ public enum PhaseThreeSelfCheck {
             focusedElementRole: "AXTextArea",
             fullElementValue: "Can you send the updated timeline today?\n\n",
             surroundingText: nil,
-            visibleElements: []
+            visibleElements: [],
+            ocrTextCandidates: []
         )
 
         return prompt.hasUsableContext
@@ -56,12 +57,38 @@ public enum PhaseThreeSelfCheck {
             visibleElements: [
                 ScreenContext.VisibleElement(role: "AXButton", label: "Send", value: nil, identifier: nil, depth: 1),
                 ScreenContext.VisibleElement(role: "AXStaticText", label: "Can you review this today?", value: nil, identifier: nil, depth: 2)
-            ]
+            ],
+            ocrTextCandidates: []
         )
 
         return prompt.text.contains("Can you review this today?")
             && !prompt.text.contains("Send")
             && prompt.droppedCandidateCount > 0
+    }
+
+    public static func promptContextUsesOCRWithoutAX() -> Bool {
+        let prompt = ScreenContext.makePromptContext(
+            captureResult: .empty,
+            appName: "Slack",
+            windowTitle: "Launch thread",
+            focusedElementRole: "AXTextArea",
+            fullElementValue: nil,
+            surroundingText: nil,
+            visibleElements: [],
+            ocrTextCandidates: [
+                OCRTextCandidate(
+                    text: "Can you send the pricing notes before standup?",
+                    confidence: 0.82,
+                    boundingBox: NormalizedRect(x: 0.20, y: 0.70, width: 0.50, height: 0.05),
+                    source: "activeWindowImage"
+                )
+            ]
+        )
+
+        return prompt.hasUsableContext
+            && prompt.captureMode == .ocrOnly
+            && prompt.text.contains("Can you send the pricing notes before standup?")
+            && prompt.confidence > 0.5
     }
 
     @MainActor

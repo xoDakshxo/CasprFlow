@@ -74,7 +74,7 @@ final class AppCoordinator {
                 message: "Allow CasprFlow in Accessibility, then press Option + Space again."
             )
         case .selected, .empty:
-            if context.promptContext.hasUsableContext {
+            if !context.bundle.prompt.isEmpty {
                 capsuleController.showContext(context)
             } else {
                 capsuleController.show(
