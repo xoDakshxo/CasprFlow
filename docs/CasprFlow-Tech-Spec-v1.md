@@ -38,7 +38,7 @@ Pipeline:
 6. Surface kind detection from bundle id + role (chat / code / email / docs / casual / other).
 7. All of the above fused into a `ScreenContextBundle` JSON-shaped struct.
 
-Screenshots stay in-process and are never sent to the model.
+Phase 5 attaches one compressed interaction crop to OpenAI as image input, alongside AX context. OCR remains local diagnostic context and is not sent in generation prompts.
 
 ## ScreenContextBundle Shape
 
@@ -81,12 +81,15 @@ Keyboard:
 
 ## Generation
 
-- Gemini API over `URLSession`.
-- Default model: `gemini-3-flash-preview`.
+- OpenAI Responses API over `URLSession`.
+- Default model: `gpt-5.4-nano`.
 - Two prompt shapes:
   1. **Chip prompt**: bundle in, returns three short intent labels.
   2. **Expansion prompt**: bundle + chip + (optional) edited draft, returns one final reply.
-- API key from `GEMINI_API_KEY` or local dev config.
+- API key from `OPENAI_API_KEY`, root `casprflow.config.local.json`, or Application Support config (`openai_api_key`).
+- Optional model override from `OPENAI_MODEL`, root `casprflow.config.local.json`, or Application Support config (`openai_model`).
+- Attach one compressed screenshot crop as image input with AX context; do not send OCR text in generation prompts.
+- Default reasoning effort is `low` for latency; stale `minimal` config values are normalized to `low`.
 - Mock mode for tests.
 
 ## Surface-Specific Realization

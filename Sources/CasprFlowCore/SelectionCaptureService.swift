@@ -39,7 +39,8 @@ final class SelectionCaptureService {
                 surroundingText: nil,
                 visibleElements: [],
                 ocrTextCandidates: [],
-                screenshotMetadata: []
+                screenshotMetadata: [],
+                screenshotAttachments: []
             )
         }
 
@@ -170,7 +171,8 @@ final class SelectionCaptureService {
             surroundingText: surroundingText,
             visibleElements: visibleElements,
             ocrTextCandidates: ocrTextCandidates,
-            screenshotMetadata: screenshots.map(\.metadata)
+            screenshotMetadata: screenshots.map(\.metadata),
+            screenshotAttachments: screenshots.compactMap { $0.attachment() }
         )
     }
 
@@ -539,6 +541,6 @@ extension ScreenContext {
         elementDescription: nil, documentURL: nil,
         elementIdentifier: nil, fullElementValue: nil,
         surroundingText: nil, visibleElements: [],
-        ocrTextCandidates: [], screenshotMetadata: []
+        ocrTextCandidates: [], screenshotMetadata: [], screenshotAttachments: []
     )
 }

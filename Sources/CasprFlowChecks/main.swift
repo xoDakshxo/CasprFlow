@@ -8,6 +8,13 @@ private func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
     }
 }
 
+private func expectValue(_ condition: Bool, _ message: String) {
+    if !condition {
+        fputs("Check failed: \(message)\n", stderr)
+        exit(1)
+    }
+}
+
 expect(HotkeyDescriptor.defaultHotkey.displayName == "Option + Space", "default hotkey label")
 expect(HotkeyDescriptor.defaultHotkey.keyCode == 49, "default hotkey key code")
 expect(HotkeyDescriptor.defaultHotkey.carbonModifiers == 2048, "default hotkey modifier")
@@ -43,7 +50,17 @@ expect(PhaseFourSelfCheck.confidenceLadderAmbientOnlyTriggersFallback(), "confid
 expect(PhaseFourSelfCheck.confidenceLadderEmptyTriggersFallback(), "confidence ladder: empty -> 0.00 + fallback")
 expect(PhaseFourSelfCheck.bundleRoundtripsAsJSON(), "bundle round-trips through JSON")
 
+expect(PhaseFiveSelfCheck.chipPromptIncludesBundlePrompt(), "chip prompt includes bundle prompt")
+expect(PhaseFiveSelfCheck.malformedChipJSONFallsBack(), "malformed chip JSON falls back")
+expect(PhaseFiveSelfCheck.slackFallbackUsesChatChips(), "Slack fallback uses chat chips")
+expect(PhaseFiveSelfCheck.expansionPromptIncludesChipAndEdit(), "expansion prompt includes chip and edit")
+expect(PhaseFiveSelfCheck.screenshotFallbackAttachesOnlyWhenConfidenceIsLow(), "screenshot fallback attaches only when confidence is low")
+expect(PhaseFiveSelfCheck.openAIRequestUsesResponsesImageContent(), "OpenAI request uses Responses image content")
+expect(PhaseFiveSelfCheck.chipPromptUsesAXButNotOCR(), "chip prompt uses AX but not OCR")
+expect(PhaseFiveSelfCheck.chipParserExtractsWrappedJSON(), "chip parser extracts wrapped JSON")
+
 Task { @MainActor in
+    expectValue(await PhaseFiveSelfCheck.mockServiceRoundTrips(), "mock generation service round-trips chips and expansion")
     expect(PhaseOneSelfCheck.canCreateReplyCapsule(), "reply capsule construction")
     expect(PhaseOneSelfCheck.canRegisterDefaultHotkey(), "default hotkey registration")
     expect(PhaseThreeSelfCheck.canCreatePhaseThreeCapsule(), "phase 3 capsule construction")

@@ -1,9 +1,35 @@
+import AppKit
 import CoreGraphics
 import Foundation
 
 struct ActiveWindowScreenshot {
     let image: CGImage
     let metadata: ScreenshotMetadata
+
+    func attachment() -> ScreenshotAttachment? {
+        let representation = NSBitmapImageRep(cgImage: image)
+        guard let data = representation.representation(
+            using: .jpeg,
+            properties: [.compressionFactor: 0.68]
+        ) else {
+            return nil
+        }
+        return ScreenshotAttachment(
+            metadata: metadata,
+            data: data,
+            mimeType: "image/jpeg"
+        )
+    }
+}
+
+struct ScreenshotAttachment: Equatable, Sendable {
+    let metadata: ScreenshotMetadata
+    let data: Data
+    let mimeType: String
+
+    var dataURL: String {
+        "data:\(mimeType);base64,\(data.base64EncodedString())"
+    }
 }
 
 enum ActiveWindowScreenshotService {

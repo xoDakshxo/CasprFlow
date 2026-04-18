@@ -102,9 +102,11 @@ struct ScreenContext: Equatable {
 
     // MARK: - OCR
 
-    /// OCR text recognized locally from interaction-targeted screenshots. Screenshots are not retained.
+    /// OCR text recognized locally from interaction-targeted screenshots.
     let ocrTextCandidates: [OCRTextCandidate]
     let screenshotMetadata: [ScreenshotMetadata]
+    /// Compressed screenshot data retained only for Phase 5 low-confidence model fallback.
+    let screenshotAttachments: [ScreenshotAttachment]
 
     /// Canonical structured bundle. Built from the fields above. Phase 4+ consumers
     /// should read `bundle` instead of poking individual AX/OCR collections.

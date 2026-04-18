@@ -17,7 +17,7 @@ CasprFlow understands the screen by the time you press the hotkey. It does not s
 
 ## Status
 
-Branch: `codex/phase-3-stub-reply-capsule-paste`
+Branch: `codex/phase-5-openai-intent-chips`
 
 | Phase | Status |
 |---|---|
@@ -25,12 +25,12 @@ Branch: `codex/phase-3-stub-reply-capsule-paste`
 | 1 Walking skeleton | Done |
 | 2 Selected text + rich AX context | Done |
 | 3 Stub reply capsule + paste | Done |
-| 4 Structured Context Bundle | Next |
-| 5 Three intent chips | Pending |
+| 4 Structured Context Bundle | Done |
+| 5 Three intent chips | Done |
 | 6 Local learning | Pending |
 | 7 Hardening + demo | Pending |
 
-Phases 4 and 5 together replace the previous "Phase 4 Gemini" + "Phase 6 Regenerate" plan. Picking a chip is the regeneration loop.
+Phases 4 and 5 together replace the previous "Phase 4 generation" + "Phase 6 Regenerate" plan. Picking a chip is the regeneration loop.
 
 ## Build
 
@@ -43,10 +43,10 @@ make run        # launch the menu-bar app
 ## Permissions
 
 - Accessibility (hotkey, AX, paste).
-- Screen Recording (active-window screenshot for OCR).
+- Screen Recording (active-window screenshot for OpenAI vision context and local OCR diagnostics).
 
 Granted in `System Settings > Privacy & Security`. Re-grant after rebuilds that re-sign the bundle.
 
 ## MVP Guardrails
 
-Fixed `Option + Space`. Gemini, not OpenAI. No auto-send. No editor overlay. No accounts, sync, dashboards, embeddings, fine-tuning, analytics, or send detection. Scope changes go through the docs first.
+Fixed `Option + Space`. OpenAI Responses API with `gpt-5.4-nano` by default. No auto-send. No editor overlay. No accounts, sync, dashboards, embeddings, fine-tuning, analytics, or send detection. Scope changes go through the docs first.

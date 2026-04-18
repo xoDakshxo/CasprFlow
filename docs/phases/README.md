@@ -10,12 +10,12 @@ Conductor-style execution tracker. Each phase is one PR. Run one phase, write it
 | 1 | [phase-1-native-walking-skeleton.md](phase-1-native-walking-skeleton.md) | Done | App shell, hotkey, placeholder capsule |
 | 2 | [phase-2-selected-text-capture.md](phase-2-selected-text-capture.md) | Done | AX selection + rich context, debug inspector |
 | 3 | [phase-3-stub-reply-capsule-and-paste.md](phase-3-stub-reply-capsule-and-paste.md) | Done | Stub capsule, paste loop, AX+OCR prompt context |
-| 4 | [phase-4-structured-context-bundle.md](phase-4-structured-context-bundle.md) | Next | Single `ScreenContextBundle`: surface kind, grouped OCR, JSON-shaped output, expanded debug UI |
-| 5 | [phase-5-three-intent-chips.md](phase-5-three-intent-chips.md) | Pending | Gemini chip prompt + expansion prompt; replaces single-draft model |
+| 4 | [phase-4-structured-context-bundle.md](phase-4-structured-context-bundle.md) | Done | Single `ScreenContextBundle`: surface kind, grouped OCR, JSON-shaped output, expanded debug UI |
+| 5 | [phase-5-three-intent-chips.md](phase-5-three-intent-chips.md) | Done | OpenAI chip prompt + expansion prompt; replaces single-draft model |
 | 6 | [phase-6-local-learning.md](phase-6-local-learning.md) | Pending | Local JSON learning, edit signals, learned label |
 | 7 | [phase-7-mvp-hardening-and-demo.md](phase-7-mvp-hardening-and-demo.md) | Pending | Real-app demo pass, error states, packaging notes |
 
-Phases 4 and 5 together replace the previous `Phase 4: Gemini` + `Phase 6: Regenerate` plan. Picking a chip is the regeneration loop — there is no separate regenerate step.
+Phases 4 and 5 together replace the previous generation + regenerate plan. Picking a chip is the regeneration loop — there is no separate regenerate step.
 
 ## How To Run A Phase
 
@@ -77,7 +77,7 @@ Use the repo-local CasprFlow skills and execute docs/phases/phase-N+1-name.md. C
 ## Non-Negotiables
 
 - fixed `Option + Space` hotkey, no picker
-- Gemini for generation, not OpenAI
+- OpenAI Responses API for generation, defaulting to `gpt-5.4-nano`
 - no auto-send
 - no large editor overlay
 - no app-specific integrations
