@@ -11,6 +11,7 @@ enum SelectionCaptureResult: Equatable {
 @MainActor
 final class SelectionCaptureService {
     private let permissionService: AccessibilityPermissionService
+    private let ocrService = LocalOCRService()
 
     init(permissionService: AccessibilityPermissionService) {
         self.permissionService = permissionService
@@ -21,7 +22,26 @@ final class SelectionCaptureService {
     func captureContext() async -> ScreenContext {
         guard permissionService.isTrusted else {
             Self.debugLog("Not trusted")
-            return .empty
+            return ScreenContext(
+                captureResult: .permissionRequired,
+                promptContext: .empty,
+                appName: nil,
+                bundleIdentifier: nil,
+                processIdentifier: nil,
+                windowTitle: nil,
+                allWindows: [],
+                focusedElementRole: nil,
+                focusedElementSubrole: nil,
+                elementDescription: nil,
+                documentURL: nil,
+                elementIdentifier: nil,
+                fullElementValue: nil,
+                surroundingText: nil,
+                visibleElements: [],
+                ocrTextCandidates: [],
+                screenshotMetadata: [],
+                screenshotAttachments: []
+            )
         }
 
         let frontApp = NSWorkspace.shared.frontmostApplication
@@ -43,6 +63,7 @@ final class SelectionCaptureService {
         let elementId = focusedElement.flatMap { Self.str($0, kAXIdentifierAttribute) }
         let docURL = focusedElement.flatMap { Self.str($0, kAXDocumentAttribute) }
             ?? Self.captureDocumentURL(pid: pid)
+        let focusedElementFrame = focusedElement.flatMap { Self.frame($0) }
 
         // Full text value of focused element
         let rawFullValue = focusedElement.flatMap { Self.str($0, kAXValueAttribute) }
@@ -76,22 +97,69 @@ final class SelectionCaptureService {
             }
         }
 
-        if case .empty = captureResult {
-            if let clipboardSelection = await Self.captureViaClipboard() {
-                captureResult = .selected(clipboardSelection)
-                Self.debugLog("Clipboard: \(clipboardSelection.prefix(60))...")
-            } else {
-                Self.debugLog("All capture methods failed")
-            }
-        }
-
         // Walk the AX tree of the focused window for visible elements
         let visibleElements = Self.walkVisibleElements(pid: pid)
 
-        return ScreenContext(
+        // Single deterministic OCR source per capture. Priority:
+        //   1. focusedInteractionRegion — when AX gave us a focused element frame.
+        //   2. cursorInteractionRegion — when cursor sits inside the active window.
+        //   3. visibleWindowRegion — full visible window fallback.
+        //   4. activeWindowImage — primary CGWindow image as last resort.
+        // Only one crop is rendered, OCR'd, and reported. No multi-source merge.
+        var screenshots: [ActiveWindowScreenshot] = []
+        var ocrTextCandidates: [OCRTextCandidate] = []
+
+        let cursorLocation = CGEvent(source: nil)?.location
+        let interactionScreenshots = ActiveWindowScreenshotService.captureInteractionRegions(
+            processIdentifier: pid,
+            windowTitle: windowTitle,
+            focusedElementFrame: focusedElementFrame,
+            cursorLocation: cursorLocation
+        )
+
+        let primaryShot: ActiveWindowScreenshot? = {
+            if focusedElementFrame != nil,
+               let focused = interactionScreenshots.first(where: { $0.metadata.source == "focusedInteractionRegion" }) {
+                return focused
+            }
+            if let cursor = interactionScreenshots.first(where: { $0.metadata.source == "cursorInteractionRegion" }) {
+                return cursor
+            }
+            if let visible = ActiveWindowScreenshotService.captureVisibleRegionFallback(
+                processIdentifier: pid,
+                windowTitle: windowTitle
+            ) {
+                return visible
+            }
+            return ActiveWindowScreenshotService.capturePrimary(
+                processIdentifier: pid,
+                windowTitle: windowTitle
+            )
+        }()
+
+        if let shot = primaryShot {
+            screenshots = [shot]
+            ocrTextCandidates = ocrService.recognizeText(in: shot.image, source: shot.metadata.source)
+        }
+        Self.debugLog("OCR source=\(primaryShot?.metadata.source ?? "none") candidates=\(ocrTextCandidates.count)")
+
+        let promptContext = ScreenContext.makePromptContext(
             captureResult: captureResult,
             appName: appName,
+            windowTitle: windowTitle,
+            focusedElementRole: elementRole,
+            fullElementValue: fullValue,
+            surroundingText: surroundingText,
+            visibleElements: visibleElements,
+            ocrTextCandidates: ocrTextCandidates
+        )
+
+        return ScreenContext(
+            captureResult: captureResult,
+            promptContext: promptContext,
+            appName: appName,
             bundleIdentifier: bundleId,
+            processIdentifier: pid,
             windowTitle: windowTitle,
             allWindows: allWindows,
             focusedElementRole: elementRole,
@@ -101,7 +169,10 @@ final class SelectionCaptureService {
             elementIdentifier: elementId,
             fullElementValue: fullValue,
             surroundingText: surroundingText,
-            visibleElements: visibleElements
+            visibleElements: visibleElements,
+            ocrTextCandidates: ocrTextCandidates,
+            screenshotMetadata: screenshots.map(\.metadata),
+            screenshotAttachments: screenshots.compactMap { $0.attachment() }
         )
     }
 
@@ -215,79 +286,6 @@ final class SelectionCaptureService {
             ))
         }
         return infos
-    }
-
-    // MARK: - Clipboard Fallback
-
-    private static func captureViaClipboard() async -> String? {
-        let pasteboard = NSPasteboard.general
-        let previousChangeCount = pasteboard.changeCount
-
-        // Save existing clipboard to restore later
-        let savedItems = pasteboard.pasteboardItems?.compactMap { item -> [NSPasteboard.PasteboardType: Data]? in
-            var dict = [NSPasteboard.PasteboardType: Data]()
-            for type in item.types {
-                if let data = item.data(forType: type) {
-                    dict[type] = data
-                }
-            }
-            return dict.isEmpty ? nil : dict
-        } ?? []
-
-        // Primary: osascript Cmd+C — works across Electron, Warp, native apps
-        let copySuccess = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let proc = Process()
-                proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-                proc.arguments = ["-e", "tell application \"System Events\" to keystroke \"c\" using command down"]
-                proc.standardOutput = FileHandle.nullDevice
-                proc.standardError = FileHandle.nullDevice
-                do {
-                    try proc.run()
-                    proc.waitUntilExit()
-                    continuation.resume(returning: proc.terminationStatus == 0)
-                } catch {
-                    continuation.resume(returning: false)
-                }
-            }
-        }
-        _ = copySuccess
-
-        try? await Task.sleep(nanoseconds: 200_000_000)
-        var newChangeCount = pasteboard.changeCount
-
-        // Fallback: CGEvent Cmd+C
-        if newChangeCount == previousChangeCount {
-            let source = CGEventSource(stateID: .privateState)
-            if let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: true),
-               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: false) {
-                keyDown.flags = .maskCommand
-                keyUp.flags = .maskCommand
-                keyDown.post(tap: .cgSessionEventTap)
-                keyUp.post(tap: .cgSessionEventTap)
-            }
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            newChangeCount = pasteboard.changeCount
-        }
-
-        let text: String?
-        if newChangeCount != previousChangeCount {
-            text = SelectionTextNormalizer.clean(pasteboard.string(forType: .string))
-        } else {
-            text = nil
-        }
-
-        // Restore original clipboard
-        pasteboard.clearContents()
-        for itemDict in savedItems {
-            let item = NSPasteboardItem()
-            for (type, data) in itemDict {
-                item.setData(data, forType: type)
-            }
-            pasteboard.writeObjects([item])
-        }
-
-        return text
     }
 
     // MARK: - AX Element Discovery
@@ -465,6 +463,46 @@ final class SelectionCaptureService {
         return nil
     }
 
+    private static func frame(_ element: AXUIElement) -> CGRect? {
+        var positionRef: CFTypeRef?
+        var sizeRef: CFTypeRef?
+        let positionStatus = AXUIElementCopyAttributeValue(
+            element,
+            kAXPositionAttribute as CFString,
+            &positionRef
+        )
+        let sizeStatus = AXUIElementCopyAttributeValue(
+            element,
+            kAXSizeAttribute as CFString,
+            &sizeRef
+        )
+
+        guard positionStatus == .success,
+              sizeStatus == .success,
+              let positionRef,
+              let sizeRef,
+              CFGetTypeID(positionRef) == AXValueGetTypeID(),
+              CFGetTypeID(sizeRef) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        let positionValue = positionRef as! AXValue
+        let sizeValue = sizeRef as! AXValue
+        var position = CGPoint.zero
+        var size = CGSize.zero
+
+        guard AXValueGetType(positionValue) == .cgPoint,
+              AXValueGetType(sizeValue) == .cgSize,
+              AXValueGetValue(positionValue, .cgPoint, &position),
+              AXValueGetValue(sizeValue, .cgSize, &size),
+              size.width > 0,
+              size.height > 0 else {
+            return nil
+        }
+
+        return CGRect(origin: position, size: size)
+    }
+
     // MARK: - Logging
 
     private static let log = Logger(subsystem: "com.casprflow.CasprFlow", category: "capture")
@@ -496,11 +534,13 @@ final class SelectionCaptureService {
 extension ScreenContext {
     static let empty = ScreenContext(
         captureResult: .permissionRequired,
-        appName: nil, bundleIdentifier: nil,
+        promptContext: .empty,
+        appName: nil, bundleIdentifier: nil, processIdentifier: nil,
         windowTitle: nil, allWindows: [],
         focusedElementRole: nil, focusedElementSubrole: nil,
         elementDescription: nil, documentURL: nil,
         elementIdentifier: nil, fullElementValue: nil,
-        surroundingText: nil, visibleElements: []
+        surroundingText: nil, visibleElements: [],
+        ocrTextCandidates: [], screenshotMetadata: [], screenshotAttachments: []
     )
 }

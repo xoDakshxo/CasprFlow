@@ -1,131 +1,60 @@
 # CasprFlow
 
-CasprFlow is a native macOS reply layer for one narrow MVP loop:
+Native macOS reply layer. One narrow loop:
 
 ```text
-highlight message -> Option + Space -> tiny reply capsule -> edit or regenerate -> paste -> learn locally
+Option + Space  ->  ScreenContextBundle  ->  3 intent chips  ->  pick one  ->  full expansion  ->  paste
 ```
 
-The day-one product is intentionally small. It is a menu-bar/background Mac app with selection-first context capture, one generated reply, an editable capsule, `Command + R` regeneration, paste-only delivery, Gemini generation, and local JSON learning.
+CasprFlow understands the screen by the time you press the hotkey. It does not show three full drafts. It shows three short moves you can pick in under a second, then expands the picked move into a full reply tailored to the current app (Slack vs Codex vs iMessage vs Mail).
 
-## Current Checkpoint
+## Documents
 
-Current branch:
+- `docs/CasprFlow-Concept-v1.md` — original wedge.
+- `docs/CasprFlow-Product-Model-v1.md` — interaction model (chips → expansion).
+- `docs/CasprFlow-Tech-Spec-v1.md` — technical surface and bundle shape.
+- `docs/phases/README.md` — phase queue.
 
-```text
-codex/phasewise-mvp-implementation
+## Status
+
+Branch: `codex/phase-5-openai-intent-chips`
+
+| Phase | Status |
+|---|---|
+| 0 Intake | Done |
+| 1 Walking skeleton | Done |
+| 2 Selected text + rich AX context | Done |
+| 3 Stub reply capsule + paste | Done |
+| 4 Structured Context Bundle | Done |
+| 5 Three intent chips | Done |
+| 5.5 Permiso permission flow | Done |
+| 6 Local learning | Pending |
+| 7 Hardening + demo | Pending |
+
+Phases 4 and 5 together replace the previous "Phase 4 generation" + "Phase 6 Regenerate" plan. Picking a chip is the regeneration loop. Phase 5.5 adds the guided Accessibility and Screen Recording setup helper.
+
+## Visual Assets
+
+- Logo SVG source variants live in `Assets/logo/`.
+- The app renders the logo natively from the same path data for menu bar, capsule headers, debug headers, loading state, and permission helper drag rows.
+- Light UI uses the black mark; dark UI uses the white mark.
+- Loading states use a looping three-part fill animation based on the SVG Artista timing.
+
+## Build
+
+```sh
+make build      # SwiftPM build, signed local app bundle
+make test       # SwiftPM unit tests + CasprFlowChecks
+make run        # launch the menu-bar app
 ```
 
-Current status:
+## Permissions
 
-```text
-Phase 0: Passed
-Phase 1: Passed
-Phase 2: Complete
-Next: Phase 3
-```
+- Accessibility (hotkey, AX, paste).
+- Screen Recording (active-window screenshot for OpenAI vision context and local OCR diagnostics).
 
-This checkpoint proves the planning path, native app shell, fixed hotkey, placeholder capsule, Accessibility permission path, selected-text capture, compact product capsule preview, and rich debug context display.
-
-## This PR
-
-This PR checkpoints Phases 0 through 2 into `main`.
-
-Progress included:
-
-- Added the SwiftPM native macOS app scaffold.
-- Added a menu-bar/background app entrypoint.
-- Added fixed `Option + Space` Carbon hotkey registration.
-- Added a tiny borderless reply capsule controller.
-- Added Accessibility permission checks and menu state.
-- Added selected-text capture through Accessibility APIs with range fallback and clipboard fallback.
-- Added rich screen context capture for focused app, windows, element metadata, surrounding text, full element value, and visible UI tree.
-- Split Phase 2 UI into two windows: a compact product capsule preview and the rough debug context inspector.
-- Added command-line build and check targets through `make build` and `make test`.
-- Added app bundle creation with stable signing behavior for TCC continuity.
-- Added Phase 0, Phase 1, and Phase 2 reports under `docs/phase-reports/`.
-- Updated phase docs and repo-local automation guidance to match the current capture approach.
-
-Validation for this checkpoint:
-
-- `make build`
-- `make test`
-
-## Next PR
-
-Next PR should execute:
-
-```text
-docs/phases/phase-3-stub-reply-capsule-and-paste.md
-```
-
-Goal:
-
-```text
-selected text -> stub reply -> edit in capsule -> paste into active app
-```
-
-Expected work:
-
-- Replace the Phase 2 product preview text with a deterministic stub reply.
-- Keep the capsule draft editable and route it into the paste flow.
-- Add keyboard handling for `Enter`, `Command + R`, and `Escape`.
-- Restore focus to the previous app before paste.
-- Paste the final capsule text into the active field.
-- Restore clipboard best-effort after paste.
-- Write `docs/phase-reports/phase-3-stub-reply-capsule-and-paste.md`.
-
-## Remaining MVP PR Queue
-
-Use one phase per PR unless the scope is explicitly changed.
-
-| PR | Phase | Goal |
-| --- | --- | --- |
-| Current | Phases 0-2 | Planning, app shell, hotkey, selected text, rich context |
-| Next | Phase 3 | Stub reply capsule and paste into active app |
-| Later | Phase 4 | Gemini generation service |
-| Later | Phase 5 | Local learning store and visible learned label |
-| Later | Phase 6 | Regenerate from edited draft with `Command + R` |
-| Later | Phase 7 | MVP hardening and demo candidate |
+Granted in `System Settings > Privacy & Security`. Use the menu-bar permission helpers when missing. Re-grant after rebuilds that re-sign the bundle.
 
 ## MVP Guardrails
 
-Keep the MVP narrow:
-
-- Native macOS app.
-- Menu-bar/background lifecycle.
-- Fixed `Option + Space` hotkey.
-- Selection-first context capture.
-- Tiny reply capsule.
-- Gemini generation.
-- One generated reply.
-- Editable draft inside the capsule.
-- `Command + R` regenerate from edit.
-- `Enter` paste.
-- No auto-send.
-- Local JSON learning.
-- One visible learned label.
-
-Do not add browser extensions, mobile, accounts, sync, app integrations, dashboards, embeddings, fine-tuning, analytics, or send detection unless the MVP scope is explicitly expanded.
-
-## Development
-
-Build:
-
-```sh
-make build
-```
-
-Run checks:
-
-```sh
-make test
-```
-
-Run the app:
-
-```sh
-make run
-```
-
-For phase work, follow `docs/phases/README.md`: complete one phase, run the phase checks, write the phase report, and stop.
+Fixed `Option + Space`. OpenAI Responses API with `gpt-5.4-nano` by default. No auto-send. No editor overlay. No accounts, sync, dashboards, embeddings, fine-tuning, analytics, or send detection. Scope changes go through the docs first.

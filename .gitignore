@@ -5,3 +5,4 @@ DerivedData/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 .casprflow-temp/
+casprflow.config.local.json

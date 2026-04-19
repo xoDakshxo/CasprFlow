@@ -1,103 +1,143 @@
 # CasprFlow Tech Spec
-### Day-one MVP technical choices
+
+Last updated for the post–Phase 3 refocus on a structured context bundle and three intent chips.
 
 ## Platform
 
-- Native macOS app.
-- macOS 14+ target for the MVP.
-- Menu-bar/background app.
-- No browser extension.
-- No Electron.
-- No mobile app.
+- Native macOS, target macOS 14+.
+- Menu-bar/background app (`LSUIElement`).
+- No browser extension, no mobile app, no Electron.
 
 ## Language and UI
 
-- Swift.
-- SwiftUI for the small visible UI.
-- AppKit for menu-bar app lifecycle, `NSPanel`, focus control, paste automation, and accessibility checks.
+- Swift + SwiftUI for the small visible UI.
+- AppKit for menu-bar lifecycle, `NSPanel`, focus, paste, accessibility.
+- SVG logo source assets live under `Assets/logo/`; runtime UI renders the mark natively from the same path data instead of parsing SVG.
 
-## App shell
+## App Shell
 
-- `NSStatusItem` menu-bar app.
-- `LSUIElement` agent-style app.
-- Fixed global hotkey for the MVP.
-- Minimal menu:
-  - Enable CasprFlow.
-  - Clear learning.
-  - Quit.
+- `NSStatusItem` menu-bar agent.
+- Fixed global hotkey: `Option + Space`.
+- Minimal menu: Enable / permission helpers / Clear learning / Quit.
+- No hotkey picker. No settings screen.
 
-## Hotkey
+## Context Capture
 
-- Use the HotKey-style Carbon wrapper already proven in the source-reuse candidate.
-- Fixed default hotkey: `Option + Space`.
-- No hotkey picker in the MVP.
-- If registration fails, show a simple error.
+CasprFlow gathers a single structured context bundle on every hotkey press. Selection is optional; the happy path does not require it.
 
-## Context capture
+Pipeline:
 
-- Copy-based selected-text capture.
-- `NSPasteboard` for clipboard read/write.
-- Synthetic `Command + C` for selected context.
-- Clipboard restore best-effort only.
+1. Active app, bundle id, window title, focused element via Accessibility (AX).
+2. AX tree walk for visible text, focused field value, surrounding text.
+3. Active-window screenshot capture, cropped to interaction regions:
+   - focused-field region (extends upward for chat history)
+   - cursor-near region
+   - visible-window fallback
+   - full window fallback
+4. Apple Vision OCR (`accurate`, language correction) on each crop.
+5. OCR lines grouped into message-like blocks by spatial proximity.
+6. Surface kind detection from bundle id + role (chat / code / email / docs / casual / other).
+7. All of the above fused into a `ScreenContextBundle` JSON-shaped struct.
+
+Phase 5 attaches one compressed interaction crop to OpenAI as image input, alongside AX context. OCR remains local diagnostic context and is not sent in generation prompts.
+
+## ScreenContextBundle Shape
+
+The bundle is the single source of truth for downstream consumers (UI, intent chips, generation, learning).
+
+```text
+surface:        kind, app, bundleId, windowTitle, isInputFocused
+focused:        role, subrole, value, fieldKind (chat/code/email/note/url/other)
+selection:      optional cleaned selected text
+recent:         ordered message-like blocks (most recent first), each with text + source
+ambient:        non-focal context (toolbar, headers, sidebar) kept separate
+prompt:         compact text projection for prompts (token-budgeted)
+debug:          raw AX candidates, raw OCR candidates, screenshots metadata
+confidence:     0.0–1.0, derived signal quality score
+```
+
+The bundle is `Codable` so it can be serialized for prompts, debug dumps, and learning.
 
 ## Reply UI
 
-- Ultra-minimal floating reply capsule.
-- Borderless `NSPanel`.
-- One editable draft field.
-- No large editor overlay.
-- No settings panel.
-- Keyboard-first controls:
-  - `Enter` paste.
-  - `Command + R` regenerate from the current edited draft.
-  - `Escape` cancel.
+Two-stage reply, not a generic editor:
+
+1. **Three intent chips**: short, action-level moves (1–3 words each) chosen for the current surface. The user picks one with a click or `1`/`2`/`3`.
+2. **Expansion**: the picked chip is expanded into a full draft tailored to the surface.
+
+States:
+
+- `Drafting…` while the bundle is being assembled, with a looping three-part logo fill animation.
+- `Pick a move` once chips are ready.
+- `Editing` after expansion, with the standard capsule controls.
+- `Error` for permission or API issues.
+
+Logo usage:
+
+- Menu bar status item uses a template-rendered logo mark.
+- Capsule placeholders, product capsule headers, debug headers, and permission helpers use black/white variants based on light/dark appearance.
+- Permission helper drag rows use the logo mark instead of the default app bundle icon.
+
+## Permission Helper UI
+
+- Menu items expose `Enable Accessibility...` and `Enable Screen Recording...` when either permission is missing.
+- Missing permissions open the matching System Settings privacy pane and show a Permiso-style passive overlay inside the Settings content area.
+- The overlay keeps the Permiso shape: upward arrow + concise instruction, back affordance, and draggable CasprFlow app row.
+- The helper stays inside the Settings content region with visible rounded corners and avoids direct TCC writes/private APIs.
+
+Keyboard:
+
+- `1`/`2`/`3`: pick chip.
+- `Enter`: paste current draft.
+- `Cmd+R`: regenerate the current chip's expansion (uses the user's edit if any).
+- `Tab`: cycle to next chip.
+- `Esc`: close.
 
 ## Generation
 
-- Gemini API over `URLSession`.
-- Default fast model: `gemini-3-flash-preview`.
-- One text-generation request per draft.
-- One text-generation request per regeneration.
-- Model name is configurable in code or local config.
-- API key is supplied through local developer config or `GEMINI_API_KEY` for the MVP.
-- No account system.
-- No cloud backend.
+- OpenAI Responses API over `URLSession`.
+- Default model: `gpt-5.4-nano`.
+- Two prompt shapes:
+  1. **Chip prompt**: bundle in, returns three short intent labels.
+  2. **Expansion prompt**: bundle + chip + (optional) edited draft, returns one final reply.
+- API key from `OPENAI_API_KEY`, root `casprflow.config.local.json`, or Application Support config (`openai_api_key`).
+- Optional model override from `OPENAI_MODEL`, root `casprflow.config.local.json`, or Application Support config (`openai_model`).
+- Attach one compressed screenshot crop as image input with AX context; do not send OCR text in generation prompts.
+- Default reasoning effort is `low` for latency; stale `minimal` config values are normalized to `low`.
+- Mock mode for tests.
+
+## Surface-Specific Realization
+
+The same bundle produces different chip vocabularies and expansion styles per surface kind:
+
+- **chat**: coordination moves (Take it, Push timing, Ask context).
+- **code**: execution moves (Implement, Inspect first, Plan steps).
+- **casual**: human moves (Yes, Soft no, Not sure).
+- **email**: structured moves (Confirm, Defer, Decline).
+- **other**: generic (Confirm, Clarify, Decline).
+
+Realization is rule-based first; learned overrides come later.
 
 ## Learning
 
-- Local JSON file.
-- Storage path: `~/Library/Application Support/CasprFlow/preferences.json`.
-- Store:
-  - selected context
-  - generated draft
-  - edited final draft
-  - regenerate instruction if present
-  - inferred style signals
-- No database.
-- No embeddings.
-- No fine-tuning.
-
-## Source Reuse
-
-Use bulk source reuse only where it saves real time.
-
-Primary source-reuse candidate:
-
-- [Axii](https://github.com/bwarzecha/Axii)
-  - License: Apache-2.0.
-  - Relevant parts: macOS menu-bar app shell, global hotkey flow, permissions pattern, and paste-into-active-app behavior.
-
-Fallback/reference source:
-
-- [Hold to Talk](https://github.com/jxucoder/hold-to-talk)
-  - License: Apache-2.0 per its public site.
-  - Relevant parts: floating indicator pattern and paste-anywhere interaction.
-
-Do not port non-Apache source for the MVP.
+- Local JSON: `~/Library/Application Support/CasprFlow/preferences.json`.
+- Stored per event:
+  - bundle summary
+  - chip picked
+  - generated expansion
+  - final pasted text
+  - inferred style signals (shorter, warmer, no_emojis, etc.)
+- No DB, no embeddings, no fine-tuning.
 
 ## Packaging
 
-- Local Xcode build only for day one.
-- No notarization.
-- No auto-update.
-- No installer.
+- SwiftPM build only.
+- Local app bundle via `Scripts/`.
+- No notarization, installer, or auto-update for the MVP.
+
+## Source Reuse
+
+- `bwarzecha/Axii` (Apache-2.0): menu-bar shell, hotkey, paste, permission patterns.
+- `bytefer/macos-vision-ocr` (MIT): Vision OCR request/output shape.
+- `zats/permiso` (license not present in inspected checkout): reference for drag/drop Accessibility and Screen Recording permission guidance; resolve license before copying source.
+- Preserve license headers; add `THIRD_PARTY_NOTICES.md` before public distribution.

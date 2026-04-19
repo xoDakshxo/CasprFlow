@@ -1,104 +1,51 @@
 # CasprFlow Phases
-### Conductor-style execution tracker for the MVP
 
-## MVP Target
-
-**highlight message -> press `Option + Space` -> tiny reply capsule -> edit or regenerate -> paste -> learn locally**
-
-Use this folder as the execution queue. Each phase is a separate file so Codex can run one phase, write its report, and stop.
-
-Use `docs/phase-audits/` for audit and decision-record documents created by phases.
+Conductor-style execution tracker. Each phase is one PR. Run one phase, write its report under `docs/phase-reports/`, stop.
 
 ## Phase Index
 
-| Phase | File | Result |
-| --- | --- | --- |
-| 0 | [phase-0-intake.md](phase-0-intake.md) | Implementation path chosen |
-| 1 | [phase-1-native-walking-skeleton.md](phase-1-native-walking-skeleton.md) | Native app shell, fixed hotkey, placeholder capsule |
-| 2 | [phase-2-selected-text-capture.md](phase-2-selected-text-capture.md) | Highlighted text reaches the app, product preview and debug inspector render |
-| 3 | [phase-3-stub-reply-capsule-and-paste.md](phase-3-stub-reply-capsule-and-paste.md) | Full OS loop works without live AI |
-| 4 | [phase-4-gemini-generation-service.md](phase-4-gemini-generation-service.md) | Selected text becomes one Gemini reply |
-| 5 | [phase-5-local-learning-store.md](phase-5-local-learning-store.md) | Edits create visible local signals |
-| 6 | [phase-6-regenerate-from-edit.md](phase-6-regenerate-from-edit.md) | User can steer reply with `Command + R` |
-| 7 | [phase-7-mvp-hardening-and-demo-candidate.md](phase-7-mvp-hardening-and-demo-candidate.md) | Full MVP works twice in real apps |
+| # | File | Status | Outcome |
+|---|---|---|---|
+| 0 | [phase-0-intake.md](phase-0-intake.md) | Done | Source-reuse decision recorded |
+| 1 | [phase-1-native-walking-skeleton.md](phase-1-native-walking-skeleton.md) | Done | App shell, hotkey, placeholder capsule |
+| 2 | [phase-2-selected-text-capture.md](phase-2-selected-text-capture.md) | Done | AX selection + rich context, debug inspector |
+| 3 | [phase-3-stub-reply-capsule-and-paste.md](phase-3-stub-reply-capsule-and-paste.md) | Done | Stub capsule, paste loop, AX+OCR prompt context |
+| 4 | [phase-4-structured-context-bundle.md](phase-4-structured-context-bundle.md) | Done | Single `ScreenContextBundle`: surface kind, grouped OCR, JSON-shaped output, expanded debug UI |
+| 5 | [phase-5-three-intent-chips.md](phase-5-three-intent-chips.md) | Done | OpenAI chip prompt + expansion prompt; replaces single-draft model |
+| 5.5 | [phase-5-5-permiso-permissions-flow.md](phase-5-5-permiso-permissions-flow.md) | Done | Permiso-style drag/drop helpers for Accessibility and Screen Recording |
+| 6 | [phase-6-local-learning.md](phase-6-local-learning.md) | Pending | Local JSON learning, edit signals, learned label |
+| 7 | [phase-7-mvp-hardening-and-demo.md](phase-7-mvp-hardening-and-demo.md) | Pending | Real-app demo pass, error states, packaging notes |
 
-## Planning Method
-
-This phase system uses:
-
-- walking skeleton first
-- one usable increment per phase
-- explicit Definition of Ready
-- explicit Definition of Done
-- testable acceptance criteria
-- phase reports as evidence
-
-References:
-
-- Scrum Guide: https://scrumguides.org/scrum-guide.html
-- Agile Alliance Definition of Ready: https://agilealliance.org/glossary/definition-of-ready/
-- Agile Alliance INVEST: https://agilealliance.org/glossary/invest/
-- Atlassian acceptance criteria: https://www.atlassian.com/work-management/project-management/acceptance-criteria
-- Walking Skeleton: https://gaiwan.co/wiki/WalkingSkeleton.md
-- Gemini API text generation: https://ai.google.dev/gemini-api/docs/text-generation
+Phases 4 and 5 together replace the previous generation + regenerate plan. Picking a chip is the regeneration loop — there is no separate regenerate step.
 
 ## How To Run A Phase
 
-Use this prompt shape:
-
 ```text
-Use the repo-local CasprFlow skills and execute docs/phases/phase-N-name.md. Complete only that phase, run its checks, write the phase report, and stop.
+Use the repo-local CasprFlow skills and execute docs/phases/phase-N-name.md.
+Complete only that phase, run its checks, write the phase report, and stop.
 ```
 
-At the start of every phase:
+Before starting: read `AGENTS.md`, `docs/CasprFlow-Product-Model-v1.md`, `docs/CasprFlow-Tech-Spec-v1.md`, this file, the phase file, and `git status --short`.
 
-1. Read `AGENTS.md`.
-2. Read `.codex/skills/casprflow-mvp-build/SKILL.md`.
-3. Read `.codex/skills/casprflow-macos-automation/SKILL.md` for OS-facing work.
-4. Read `.codex/skills/casprflow-product-docs/SKILL.md` for docs or scope work.
-5. Read this README.
-6. Read the current phase file.
-7. Inspect `git status --short`.
+After finishing: run `make build` and `make test`, write the report, stop.
 
-At the end of every phase:
+## Definition Of Ready
 
-1. Run the phase's automated checks.
-2. Run the phase's manual smoke checks when the app exists.
-3. Create or update the phase report under `docs/phase-reports/`.
-4. State exactly what passed, what failed, and what remains.
-5. Stop. Do not start the next phase unless asked.
+- previous phase report exists and is `Passed`, or this is Phase 0
+- the phase has one clear outcome
+- required permissions / API keys are available or noted as blockers
+- the phase does not add non-MVP scope
 
-## Global Definition Of Ready
+## Definition Of Done
 
-A phase is ready only when:
-
-- The previous phase report exists and is marked `Passed`, or this is Phase 0.
-- `git status --short` has been inspected.
-- The current phase has a single clear outcome.
-- Required secrets, network access, or macOS permissions are available or explicitly marked as blockers.
-- The phase does not add non-MVP scope.
-
-If any item is missing, Codex should either fix the missing setup inside the phase or stop with a blocker report.
-
-## Global Definition Of Done
-
-A phase is done only when:
-
-- The phase deliverables exist.
-- The app builds if app code exists.
-- Unit tests pass if a test target exists.
-- Manual checks are completed or blocked with a concrete reason.
-- New behavior is documented in the phase report.
-- No hotkey picker, auto-send, account system, sync, dashboard, browser extension, mobile app, embeddings, or fine-tuning was added.
-- The final response includes the next phase prompt.
+- deliverables exist
+- `make build` and `make test` pass
+- manual checks completed or blocked with a concrete reason
+- the phase report is written under `docs/phase-reports/`
+- no hotkey picker, auto-send, account system, sync, dashboard, browser extension, mobile app, embeddings, or fine-tuning was added
+- the response includes the next phase prompt
 
 ## Phase Report Template
-
-Create reports in:
-
-`docs/phase-reports/`
-
-Use this shape:
 
 ```markdown
 # Phase N Report: Name
@@ -106,42 +53,34 @@ Use this shape:
 Status: Passed | Blocked | Failed
 
 ## Summary
-
 - What changed:
 - What now works:
 - What was intentionally skipped:
 
 ## Checks
-
 - Build:
 - Unit tests:
 - Manual smoke:
 - Docs/skills:
 
 ## Evidence
-
 - Commands run:
 - Apps tested:
 - Files changed:
 
 ## Known Issues
-
 - None, or list concrete issues.
 
 ## Next Phase Prompt
-
 Use the repo-local CasprFlow skills and execute docs/phases/phase-N+1-name.md. Complete only that phase, run its checks, write the phase report, and stop.
 ```
 
 ## Non-Negotiables
 
-- Fixed `Option + Space` hotkey.
-- No hotkey picker.
-- Gemini generation, not OpenAI.
-- No auto-send.
-- No large editor overlay.
-- No app-specific integrations.
-- No account system.
-- No cloud memory.
-- No model training.
-- No phase can be marked passed without evidence.
+- fixed `Option + Space` hotkey, no picker
+- OpenAI Responses API for generation, defaulting to `gpt-5.4-nano`
+- no auto-send
+- no large editor overlay
+- no app-specific integrations
+- no account system / cloud / training
+- no phase passes without evidence

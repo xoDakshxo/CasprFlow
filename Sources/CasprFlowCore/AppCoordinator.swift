@@ -4,7 +4,15 @@ import AppKit
 final class AppCoordinator {
     private let hotkeyService = HotkeyService()
     private let permissionService = AccessibilityPermissionService()
+    private let screenRecordingPermissionService = ScreenRecordingPermissionService()
     private lazy var selectionCaptureService = SelectionCaptureService(permissionService: permissionService)
+    private lazy var permissionGuideController = PermissionGuideController(
+        accessibilityPermissionService: permissionService,
+        screenRecordingPermissionService: screenRecordingPermissionService,
+        onPermissionStateChanged: { [weak self] in
+            self?.statusItemController?.refresh()
+        }
+    )
     private let capsuleController = ReplyCapsuleController()
     private var statusItemController: StatusItemController?
     private var isEnabled = true
@@ -13,19 +21,21 @@ final class AppCoordinator {
         statusItemController = StatusItemController(
             onToggleEnabled: { [weak self] in self?.toggleEnabled() },
             onClearLearning: { [weak self] in self?.showLearningCleared() },
-            onRequestAccessibility: { [weak self] in self?.permissionService.requestAccess() },
+            onRequestAccessibility: { [weak self] in self?.showPermissionGuide(.accessibility) },
+            onRequestScreenRecording: { [weak self] in self?.showPermissionGuide(.screenRecording) },
             onQuit: { NSApp.terminate(nil) },
             stateProvider: { [weak self] in
                 StatusItemState(
                     isEnabled: self?.isEnabled ?? false,
-                    isAccessibilityTrusted: self?.permissionService.isTrusted ?? false
+                    isAccessibilityTrusted: self?.permissionService.isTrusted ?? false,
+                    isScreenRecordingGranted: self?.screenRecordingPermissionService.isGranted ?? false
                 )
             }
         )
 
-        // Prompt for accessibility on launch if not trusted
+        // Keep first-run setup pointed at the exact permission pane.
         if !permissionService.isTrusted {
-            permissionService.requestAccess()
+            permissionGuideController.present(panel: .accessibility)
         }
 
         registerHotkey()
@@ -33,6 +43,7 @@ final class AppCoordinator {
 
     func stop() {
         hotkeyService.unregister()
+        permissionGuideController.dismiss()
     }
 
     private func registerHotkey() {
@@ -68,15 +79,21 @@ final class AppCoordinator {
         let context = await selectionCaptureService.captureContext()
         NSLog("[CasprFlow] Capture result: %@", String(describing: context.captureResult))
         switch context.captureResult {
-        case .selected:
-            capsuleController.showContext(context)
-        case .empty:
-            capsuleController.show(title: "CasprFlow", message: "Highlight a message first.")
         case .permissionRequired:
+            showPermissionGuide(.accessibility)
             capsuleController.show(
                 title: "Accessibility needed",
-                message: "Allow CasprFlow in Accessibility, then highlight a message."
+                message: "Use the menu helper to add CasprFlow, then press Option + Space again."
             )
+        case .selected, .empty:
+            if !context.bundle.prompt.isEmpty {
+                capsuleController.showContext(context)
+            } else {
+                capsuleController.show(
+                    title: "Need more context",
+                    message: "Focus a reply field with visible message text, then press Option + Space."
+                )
+            }
         }
     }
 
@@ -85,6 +102,11 @@ final class AppCoordinator {
             title: "Learning cleared",
             message: "Nothing to clear yet."
         )
+    }
+
+    private func showPermissionGuide(_ panel: PermissionGuidePanel) {
+        permissionGuideController.present(panel: panel)
+        statusItemController?.refresh()
     }
 
 }
