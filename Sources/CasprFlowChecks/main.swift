@@ -19,9 +19,14 @@ expect(HotkeyDescriptor.defaultHotkey.displayName == "Option + Space", "default 
 expect(HotkeyDescriptor.defaultHotkey.keyCode == 49, "default hotkey key code")
 expect(HotkeyDescriptor.defaultHotkey.carbonModifiers == 2048, "default hotkey modifier")
 
-let state = StatusItemState(isEnabled: true, isAccessibilityTrusted: false)
+let state = StatusItemState(
+    isEnabled: true,
+    isAccessibilityTrusted: false,
+    isScreenRecordingGranted: false
+)
 expect(state.isEnabled, "status item enabled flag")
 expect(!state.isAccessibilityTrusted, "status item accessibility flag")
+expect(!state.isScreenRecordingGranted, "status item screen recording flag")
 
 expect(SelectionTextNormalizer.clean(nil) == nil, "nil selected text")
 expect(SelectionTextNormalizer.clean("   \n\t  ") == nil, "empty selected text")
@@ -58,6 +63,10 @@ expect(PhaseFiveSelfCheck.screenshotFallbackAttachesOnlyWhenConfidenceIsLow(), "
 expect(PhaseFiveSelfCheck.openAIRequestUsesResponsesImageContent(), "OpenAI request uses Responses image content")
 expect(PhaseFiveSelfCheck.chipPromptUsesAXButNotOCR(), "chip prompt uses AX but not OCR")
 expect(PhaseFiveSelfCheck.chipParserExtractsWrappedJSON(), "chip parser extracts wrapped JSON")
+
+expect(PhaseFivePointFiveSelfCheck.menuStateTitlesReflectPermissions(), "permission menu titles reflect state")
+expect(PhaseFivePointFiveSelfCheck.permissionPanelsMapToSettingsPanes(), "permission panels map to settings panes")
+expect(PhaseFivePointFiveSelfCheck.dragSourceExposesBundleFileURL(), "permission drag source exposes bundle file URL")
 
 Task { @MainActor in
     expectValue(await PhaseFiveSelfCheck.mockServiceRoundTrips(), "mock generation service round-trips chips and expansion")

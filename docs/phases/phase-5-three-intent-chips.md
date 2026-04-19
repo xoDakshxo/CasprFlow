@@ -197,5 +197,5 @@ Without an API key:
 ## Next Phase Prompt
 
 ```text
-Use the repo-local CasprFlow skills and execute docs/phases/phase-6-local-learning.md. Complete only that phase, run its checks, write the phase report, and stop.
+Use the repo-local CasprFlow skills and execute docs/phases/phase-5-5-permiso-permissions-flow.md. Complete only that phase, run its checks, write the phase report, and stop.
 ```

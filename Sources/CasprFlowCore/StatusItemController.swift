@@ -3,10 +3,16 @@ import AppKit
 public struct StatusItemState: Equatable, Sendable {
     public let isEnabled: Bool
     public let isAccessibilityTrusted: Bool
+    public let isScreenRecordingGranted: Bool
 
-    public init(isEnabled: Bool, isAccessibilityTrusted: Bool) {
+    public init(
+        isEnabled: Bool,
+        isAccessibilityTrusted: Bool,
+        isScreenRecordingGranted: Bool = false
+    ) {
         self.isEnabled = isEnabled
         self.isAccessibilityTrusted = isAccessibilityTrusted
+        self.isScreenRecordingGranted = isScreenRecordingGranted
     }
 }
 
@@ -16,6 +22,7 @@ final class StatusItemController: NSObject {
     private let onToggleEnabled: () -> Void
     private let onClearLearning: () -> Void
     private let onRequestAccessibility: () -> Void
+    private let onRequestScreenRecording: () -> Void
     private let onQuit: () -> Void
     private let stateProvider: () -> StatusItemState
 
@@ -23,6 +30,7 @@ final class StatusItemController: NSObject {
         onToggleEnabled: @escaping () -> Void,
         onClearLearning: @escaping () -> Void,
         onRequestAccessibility: @escaping () -> Void,
+        onRequestScreenRecording: @escaping () -> Void,
         onQuit: @escaping () -> Void,
         stateProvider: @escaping () -> StatusItemState
     ) {
@@ -30,6 +38,7 @@ final class StatusItemController: NSObject {
         self.onToggleEnabled = onToggleEnabled
         self.onClearLearning = onClearLearning
         self.onRequestAccessibility = onRequestAccessibility
+        self.onRequestScreenRecording = onRequestScreenRecording
         self.onQuit = onQuit
         self.stateProvider = stateProvider
         super.init()
@@ -57,14 +66,23 @@ final class StatusItemController: NSObject {
         hotkeyItem.isEnabled = false
         menu.addItem(hotkeyItem)
 
-        let permissionItem = NSMenuItem(
-            title: state.isAccessibilityTrusted ? "Accessibility: Granted" : "Accessibility: Needed soon",
+        let accessibilityItem = NSMenuItem(
+            title: Self.accessibilityMenuTitle(isGranted: state.isAccessibilityTrusted),
             action: #selector(openAccessibility),
             keyEquivalent: ""
         )
-        permissionItem.target = self
-        permissionItem.isEnabled = !state.isAccessibilityTrusted
-        menu.addItem(permissionItem)
+        accessibilityItem.target = self
+        accessibilityItem.isEnabled = !state.isAccessibilityTrusted
+        menu.addItem(accessibilityItem)
+
+        let screenRecordingItem = NSMenuItem(
+            title: Self.screenRecordingMenuTitle(isGranted: state.isScreenRecordingGranted),
+            action: #selector(openScreenRecording),
+            keyEquivalent: ""
+        )
+        screenRecordingItem.target = self
+        screenRecordingItem.isEnabled = !state.isScreenRecordingGranted
+        menu.addItem(screenRecordingItem)
 
         menu.addItem(.separator())
 
@@ -85,6 +103,14 @@ final class StatusItemController: NSObject {
         statusItem.menu = menu
     }
 
+    nonisolated static func accessibilityMenuTitle(isGranted: Bool) -> String {
+        isGranted ? "Accessibility: Granted" : "Enable Accessibility..."
+    }
+
+    nonisolated static func screenRecordingMenuTitle(isGranted: Bool) -> String {
+        isGranted ? "Screen Recording: Granted" : "Enable Screen Recording..."
+    }
+
     @objc private func toggleEnabled() {
         onToggleEnabled()
     }
@@ -95,6 +121,10 @@ final class StatusItemController: NSObject {
 
     @objc private func openAccessibility() {
         onRequestAccessibility()
+    }
+
+    @objc private func openScreenRecording() {
+        onRequestScreenRecording()
     }
 
     @objc private func quit() {

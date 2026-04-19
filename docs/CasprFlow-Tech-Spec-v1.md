@@ -17,7 +17,7 @@ Last updated for the post–Phase 3 refocus on a structured context bundle and t
 
 - `NSStatusItem` menu-bar agent.
 - Fixed global hotkey: `Option + Space`.
-- Minimal menu: Enable / Clear learning / Quit.
+- Minimal menu: Enable / permission helpers / Clear learning / Quit.
 - No hotkey picker. No settings screen.
 
 ## Context Capture
@@ -125,4 +125,5 @@ Realization is rule-based first; learned overrides come later.
 
 - `bwarzecha/Axii` (Apache-2.0): menu-bar shell, hotkey, paste, permission patterns.
 - `bytefer/macos-vision-ocr` (MIT): Vision OCR request/output shape.
+- `zats/permiso` (license not present in inspected checkout): reference for drag/drop Accessibility and Screen Recording permission guidance; resolve license before copying source.
 - Preserve license headers; add `THIRD_PARTY_NOTICES.md` before public distribution.

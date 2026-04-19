@@ -12,6 +12,7 @@ Conductor-style execution tracker. Each phase is one PR. Run one phase, write it
 | 3 | [phase-3-stub-reply-capsule-and-paste.md](phase-3-stub-reply-capsule-and-paste.md) | Done | Stub capsule, paste loop, AX+OCR prompt context |
 | 4 | [phase-4-structured-context-bundle.md](phase-4-structured-context-bundle.md) | Done | Single `ScreenContextBundle`: surface kind, grouped OCR, JSON-shaped output, expanded debug UI |
 | 5 | [phase-5-three-intent-chips.md](phase-5-three-intent-chips.md) | Done | OpenAI chip prompt + expansion prompt; replaces single-draft model |
+| 5.5 | [phase-5-5-permiso-permissions-flow.md](phase-5-5-permiso-permissions-flow.md) | Done | Permiso-style drag/drop helpers for Accessibility and Screen Recording |
 | 6 | [phase-6-local-learning.md](phase-6-local-learning.md) | Pending | Local JSON learning, edit signals, learned label |
 | 7 | [phase-7-mvp-hardening-and-demo.md](phase-7-mvp-hardening-and-demo.md) | Pending | Real-app demo pass, error states, packaging notes |
 

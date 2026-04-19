@@ -36,6 +36,16 @@ Reason:
 - License signal: public site says Apache 2.0 licensed
 - Use: fallback/reference only for floating indicator and paste-anywhere UX if Axii blocks progress
 
+### Permiso
+
+- Repo: `https://github.com/zats/permiso.git`
+- Local inspection path: `.casprflow-temp/permiso`
+- Inspected commit: `3012871`
+- License file inspected: none present in checkout
+- License: unresolved
+- Use: reference for System Settings privacy pane launch, Settings window tracking, overlay helper, and drag source for adding the current app to Accessibility / Screen Recording
+- Caveat: package declares Swift tools 6.2 and `.macOS(.v26)`; CasprFlow should reimplement the narrow behavior locally unless direct dependency compatibility is verified
+
 ## Axii Files Worth Reusing
 
 Port or adapt only when the corresponding CasprFlow phase needs the behavior.
@@ -103,6 +113,7 @@ If source code is copied or substantially adapted:
 - Add `THIRD_PARTY_NOTICES.md` before any public distribution.
 - Note copied/adapted files in the relevant phase report.
 - For `macos-vision-ocr`, keep MIT attribution because `LocalOCRService` intentionally adapts its Vision request/output shape.
+- For `permiso`, do not copy or substantially adapt source until license status is clarified or permission is obtained.
 
 If only behavior is reimplemented after inspection:
 
