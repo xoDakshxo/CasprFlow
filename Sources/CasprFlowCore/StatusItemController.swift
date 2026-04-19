@@ -44,7 +44,13 @@ final class StatusItemController: NSObject {
         super.init()
 
         if let button = statusItem.button {
-            button.title = "CF"
+            button.title = ""
+            button.image = CasprFlowLogo.image(
+                variant: .black,
+                size: NSSize(width: 18, height: 18),
+                isTemplate: true
+            )
+            button.imagePosition = .imageOnly
             button.toolTip = "CasprFlow"
         }
         refresh()

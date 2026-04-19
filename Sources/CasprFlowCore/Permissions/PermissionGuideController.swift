@@ -70,7 +70,7 @@ final class PermissionGuideController {
         }
 
         let identity = PermissionAppIdentity.current()
-        let size = NSSize(width: 530, height: 109)
+        let size = NSSize(width: 460, height: 108)
         let view = PermissionGuideView(
             panel: panel,
             appIdentity: identity,
@@ -112,15 +112,17 @@ final class PermissionGuideController {
     private func positionedFrame(size: NSSize, snapshot: SystemSettingsWindowSnapshot) -> NSRect {
         let settingsFrame = snapshot.frame
         let visibleFrame = snapshot.visibleFrame
-        let sidebarWidth: CGFloat = 170
+        let sidebarWidth: CGFloat = 210
         let contentMinX = settingsFrame.minX + sidebarWidth
-        let contentWidth = max(settingsFrame.width - sidebarWidth, size.width)
-        let preferredX = contentMinX + ((contentWidth - size.width) / 2) - 8
-        let preferredY = settingsFrame.minY + 14
-        let minX = visibleFrame.minX + 8
-        let maxX = visibleFrame.maxX - size.width - 8
-        let minY = visibleFrame.minY + 8
-        let maxY = visibleFrame.maxY - size.height - 8
+        let contentMaxX = settingsFrame.maxX - 22
+        let contentWidth = max(contentMaxX - contentMinX, size.width)
+        let preferredX = contentMinX + ((contentWidth - size.width) / 2)
+        let preferredY = settingsFrame.minY + 18
+        let screenInset: CGFloat = 18
+        let minX = max(contentMinX + 16, visibleFrame.minX + screenInset)
+        let maxX = min(contentMaxX - size.width, visibleFrame.maxX - size.width - screenInset)
+        let minY = max(settingsFrame.minY + 16, visibleFrame.minY + screenInset)
+        let maxY = min(settingsFrame.maxY - size.height - 16, visibleFrame.maxY - size.height - screenInset)
 
         return NSRect(
             x: min(max(preferredX, minX), maxX),
@@ -155,16 +157,18 @@ private final class PermissionGuideWindow: NSPanel {
 private struct PermissionAppIdentity {
     let appName: String
     let bundleURL: URL
-    let icon: NSImage
+    let dragRowIcon: NSImage
 
     static func current() -> PermissionAppIdentity {
         let bundle = Bundle.main
         let bundleURL = NSRunningApplication.current.bundleURL ?? bundle.bundleURL
         let appName = bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
             ?? bundleURL.deletingPathExtension().lastPathComponent
-        let icon = NSWorkspace.shared.icon(forFile: bundleURL.path)
-        icon.size = NSSize(width: 32, height: 32)
-        return PermissionAppIdentity(appName: appName, bundleURL: bundleURL, icon: icon)
+        let icon = CasprFlowLogo.image(
+            variant: .black,
+            size: NSSize(width: 22, height: 22)
+        )
+        return PermissionAppIdentity(appName: appName, bundleURL: bundleURL, dragRowIcon: icon)
     }
 }
 
@@ -186,19 +190,21 @@ private struct PermissionGuideView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 10) {
                     Image(systemName: "arrow.up")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: 27, weight: .bold))
                         .foregroundStyle(Color(nsColor: NSColor(calibratedRed: 0.15, green: 0.54, blue: 0.98, alpha: 1)))
                         .frame(width: 28, height: 28)
 
-                    Text("Drag \(appIdentity.appName) to the list above to allow \(panel.shortName)")
+                    Text("Drag \(appIdentity.appName) to the list above")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.primary.opacity(0.82))
                         .lineLimit(1)
+                        .truncationMode(.tail)
+                        .layoutPriority(1)
                 }
-                .padding(.leading, 35)
-                .padding(.top, 10)
+                .padding(.leading, 32)
+                .padding(.top, 12)
 
-                HStack(spacing: 14) {
+                HStack(spacing: 12) {
                     Button {
                         onClose()
                     } label: {
@@ -217,10 +223,10 @@ private struct PermissionGuideView: View {
                         .frame(height: 43)
                 }
                 .padding(.leading, 18)
-                .padding(.trailing, 21)
+                .padding(.trailing, 20)
             }
         }
-        .frame(width: 530, height: 109)
+        .frame(width: 460, height: 108)
     }
 }
 
@@ -231,7 +237,7 @@ private struct PermissionDragSourceRepresentable: NSViewRepresentable {
         PermissionDragSourceView(
             bundleURL: appIdentity.bundleURL,
             appName: appIdentity.appName,
-            appIcon: appIdentity.icon
+            appIcon: appIdentity.dragRowIcon
         )
     }
 

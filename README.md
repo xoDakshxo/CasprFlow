@@ -27,10 +27,18 @@ Branch: `codex/phase-5-openai-intent-chips`
 | 3 Stub reply capsule + paste | Done |
 | 4 Structured Context Bundle | Done |
 | 5 Three intent chips | Done |
+| 5.5 Permiso permission flow | Done |
 | 6 Local learning | Pending |
 | 7 Hardening + demo | Pending |
 
-Phases 4 and 5 together replace the previous "Phase 4 generation" + "Phase 6 Regenerate" plan. Picking a chip is the regeneration loop.
+Phases 4 and 5 together replace the previous "Phase 4 generation" + "Phase 6 Regenerate" plan. Picking a chip is the regeneration loop. Phase 5.5 adds the guided Accessibility and Screen Recording setup helper.
+
+## Visual Assets
+
+- Logo SVG source variants live in `Assets/logo/`.
+- The app renders the logo natively from the same path data for menu bar, capsule headers, debug headers, loading state, and permission helper drag rows.
+- Light UI uses the black mark; dark UI uses the white mark.
+- Loading states use a looping three-part fill animation based on the SVG Artista timing.
 
 ## Build
 
@@ -45,7 +53,7 @@ make run        # launch the menu-bar app
 - Accessibility (hotkey, AX, paste).
 - Screen Recording (active-window screenshot for OpenAI vision context and local OCR diagnostics).
 
-Granted in `System Settings > Privacy & Security`. Re-grant after rebuilds that re-sign the bundle.
+Granted in `System Settings > Privacy & Security`. Use the menu-bar permission helpers when missing. Re-grant after rebuilds that re-sign the bundle.
 
 ## MVP Guardrails
 

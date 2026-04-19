@@ -216,9 +216,12 @@ struct ReplyCapsulePlaceholderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.primary)
+            HStack(spacing: 7) {
+                CasprFlowLogoMark(size: 15)
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+            }
 
             Text(message)
                 .font(.system(size: 13))
@@ -278,9 +281,12 @@ struct ProductReplyCapsuleView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Text("CasprFlow")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.primary)
+                HStack(spacing: 7) {
+                    CasprFlowLogoMark(size: 15)
+                    Text("CasprFlow")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.primary)
+                }
 
                 Text(phase.badgeText)
                     .font(.system(size: 10, weight: .medium))
@@ -492,9 +498,7 @@ struct ProductReplyCapsuleView: View {
 
     private func loadingView(_ text: String) -> some View {
         HStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.small)
-                .scaleEffect(0.72)
+            CasprFlowLoadingLogoMark(size: 18)
             Text(text)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
@@ -919,9 +923,18 @@ private final class KeyHandlingTextView: NSTextView {
 
 struct DebugContextPlaceholderView: View {
     var body: some View {
-        Text("Debug context appears after the hotkey captures the current window.")
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                CasprFlowLogoMark(size: 15)
+                Text("CasprFlow")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+            }
+
+            Text("Debug context appears after the hotkey captures the current window.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+        }
             .padding(14)
             .frame(width: 480, height: 520, alignment: .topLeading)
             .background(.regularMaterial)
@@ -953,9 +966,12 @@ struct ContextCapsuleView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Debug Context")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.primary)
+                HStack(spacing: 7) {
+                    CasprFlowLogoMark(size: 15)
+                    Text("Debug Context")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.primary)
+                }
 
                 // Header: app + window
                 contextHeader

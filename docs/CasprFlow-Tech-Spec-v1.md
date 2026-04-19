@@ -12,6 +12,7 @@ Last updated for the post–Phase 3 refocus on a structured context bundle and t
 
 - Swift + SwiftUI for the small visible UI.
 - AppKit for menu-bar lifecycle, `NSPanel`, focus, paste, accessibility.
+- SVG logo source assets live under `Assets/logo/`; runtime UI renders the mark natively from the same path data instead of parsing SVG.
 
 ## App Shell
 
@@ -66,10 +67,23 @@ Two-stage reply, not a generic editor:
 
 States:
 
-- `Drafting…` while the bundle is being assembled.
+- `Drafting…` while the bundle is being assembled, with a looping three-part logo fill animation.
 - `Pick a move` once chips are ready.
 - `Editing` after expansion, with the standard capsule controls.
 - `Error` for permission or API issues.
+
+Logo usage:
+
+- Menu bar status item uses a template-rendered logo mark.
+- Capsule placeholders, product capsule headers, debug headers, and permission helpers use black/white variants based on light/dark appearance.
+- Permission helper drag rows use the logo mark instead of the default app bundle icon.
+
+## Permission Helper UI
+
+- Menu items expose `Enable Accessibility...` and `Enable Screen Recording...` when either permission is missing.
+- Missing permissions open the matching System Settings privacy pane and show a Permiso-style passive overlay inside the Settings content area.
+- The overlay keeps the Permiso shape: upward arrow + concise instruction, back affordance, and draggable CasprFlow app row.
+- The helper stays inside the Settings content region with visible rounded corners and avoids direct TCC writes/private APIs.
 
 Keyboard:
 

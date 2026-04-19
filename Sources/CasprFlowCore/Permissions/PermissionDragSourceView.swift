@@ -20,7 +20,7 @@ final class PermissionDragSourceView: NSView, NSPasteboardItemDataProvider, NSDr
     }
 
     override var intrinsicContentSize: NSSize {
-        NSSize(width: 445, height: 43)
+        NSSize(width: 376, height: 43)
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
