@@ -80,6 +80,15 @@ expect(KnowledgeFastRepliesPhaseOneSelfCheck.redactionRemovesObviousSecrets(), "
 expect(KnowledgeFastRepliesPhaseOneSelfCheck.chromePruningDropsButtons(), "capture pack prunes chrome")
 expect(KnowledgeFastRepliesPhaseOneSelfCheck.slackChromeDoesNotBecomeRecentContext(), "capture pack excludes Slack chrome from recent context")
 expect(KnowledgeFastRepliesPhaseOneSelfCheck.debugJSONStaysCompact(), "capture pack debug JSON stays compact")
+expect(KnowledgeFastRepliesPhaseTwoSelfCheck.buildContextRequestIncludesOneScreenshot(), "build-context request includes one screenshot")
+expect(KnowledgeFastRepliesPhaseTwoSelfCheck.buildContextPromptDoesNotWriteReplies(), "build-context prompt does not write replies")
+expect(KnowledgeFastRepliesPhaseTwoSelfCheck.buildOutputRequestUsesContextBrief(), "build-output request uses context brief")
+expect(KnowledgeFastRepliesPhaseTwoSelfCheck.buildOutputRequestStoresFalseAndSendsNoScreenshot(), "build-output stores false and sends no screenshot")
+expect(KnowledgeFastRepliesPhaseTwoSelfCheck.malformedContextJSONFallsBack(), "malformed context JSON falls back")
+expect(KnowledgeFastRepliesPhaseTwoSelfCheck.malformedReplyJSONFallsBack(), "malformed reply JSON falls back")
+expect(KnowledgeFastRepliesPhaseTwoSelfCheck.duplicateChipsFallBack(), "duplicate chips fall back")
+expect(KnowledgeFastRepliesPhaseTwoSelfCheck.missingDraftFallsBack(), "missing draft falls back")
+expect(KnowledgeFastRepliesPhaseTwoSelfCheck.modelRolesAreDistinct(), "context, output, and follow-up model roles are distinct")
 
 Task { @MainActor in
     expectValue(await PhaseFiveSelfCheck.mockServiceRoundTrips(), "mock generation service round-trips chips and expansion")

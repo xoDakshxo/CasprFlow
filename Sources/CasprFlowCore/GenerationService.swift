@@ -898,7 +898,8 @@ final class OpenAIResponsesClient {
         maxOutputTokens: Int,
         screenshots: [ScreenshotAttachment],
         imageDetail: String,
-        reasoningEffort: String
+        reasoningEffort: String,
+        instructions: String = defaultInstructions
     ) async throws -> String {
         let body = Self.requestBody(
             model: model,
@@ -907,7 +908,8 @@ final class OpenAIResponsesClient {
             maxOutputTokens: maxOutputTokens,
             screenshots: screenshots,
             imageDetail: imageDetail,
-            reasoningEffort: reasoningEffort
+            reasoningEffort: reasoningEffort,
+            instructions: instructions
         )
 
         guard JSONSerialization.isValidJSONObject(body),
@@ -946,11 +948,12 @@ final class OpenAIResponsesClient {
         maxOutputTokens: Int,
         screenshots: [ScreenshotAttachment],
         imageDetail: String,
-        reasoningEffort: String
+        reasoningEffort: String,
+        instructions: String = defaultInstructions
     ) -> [String: Any] {
         var body: [String: Any] = [
             "model": model,
-            "instructions": "You are CasprFlow, a Mac reply layer. Follow the product prompt exactly. Prioritize the latest active message, write as the configured user, and keep output concise.",
+            "instructions": instructions,
             "input": [
                 [
                     "role": "user",
@@ -974,6 +977,8 @@ final class OpenAIResponsesClient {
 
         return body
     }
+
+    static let defaultInstructions = "You are CasprFlow, a Mac reply layer. Follow the product prompt exactly. Prioritize the latest active message, write as the configured user, and keep output concise."
 
     static func inputContent(
         prompt: String,
