@@ -85,6 +85,7 @@ public struct CapturePack: Codable, Equatable, Sendable {
     public let recent: [ScreenContextBundle.MessageBlock]
     public let ambient: [String]
     public let visibleAXCandidates: [String]
+    public let screenshotMetadata: [ScreenshotMetadata]
     public let screenshot: Screenshot?
     public let confidence: Double
     public let screenshotDecision: ScreenshotDecision
@@ -101,6 +102,7 @@ public struct CapturePack: Codable, Equatable, Sendable {
         recent: [ScreenContextBundle.MessageBlock],
         ambient: [String],
         visibleAXCandidates: [String],
+        screenshotMetadata: [ScreenshotMetadata],
         screenshot: Screenshot?,
         confidence: Double,
         screenshotDecision: ScreenshotDecision
@@ -116,9 +118,77 @@ public struct CapturePack: Codable, Equatable, Sendable {
         self.recent = recent
         self.ambient = ambient
         self.visibleAXCandidates = visibleAXCandidates
+        self.screenshotMetadata = screenshotMetadata
         self.screenshot = screenshot
         self.confidence = confidence
         self.screenshotDecision = screenshotDecision
+    }
+}
+
+extension CapturePack {
+    public var debugJSON: String {
+        struct DebugScreenshot: Encodable {
+            let source: String
+            let windowID: UInt32?
+            let width: Int
+            let height: Int
+            let attachedBytes: Int?
+            let mimeType: String?
+        }
+
+        struct DebugPack: Encodable {
+            let id: String
+            let capturedAt: Date
+            let appName: String?
+            let bundleId: String?
+            let windowTitle: String?
+            let surfaceKind: ScreenContextBundle.SurfaceKind
+            let focusedField: FocusedFieldSummary?
+            let selection: String?
+            let recent: [ScreenContextBundle.MessageBlock]
+            let ambient: [String]
+            let visibleAXCandidates: [String]
+            let screenshotMetadata: [ScreenshotMetadata]
+            let screenshot: DebugScreenshot?
+            let confidence: Double
+            let screenshotDecision: ScreenshotDecision
+        }
+
+        let debug = DebugPack(
+            id: id,
+            capturedAt: capturedAt,
+            appName: appName,
+            bundleId: bundleId,
+            windowTitle: windowTitle,
+            surfaceKind: surfaceKind,
+            focusedField: focusedField,
+            selection: selection,
+            recent: recent,
+            ambient: ambient,
+            visibleAXCandidates: visibleAXCandidates,
+            screenshotMetadata: screenshotMetadata,
+            screenshot: screenshot.map {
+                DebugScreenshot(
+                    source: $0.metadata.source,
+                    windowID: $0.metadata.windowID,
+                    width: $0.metadata.width,
+                    height: $0.metadata.height,
+                    attachedBytes: $0.data?.count,
+                    mimeType: $0.mimeType
+                )
+            },
+            confidence: confidence,
+            screenshotDecision: screenshotDecision
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .iso8601
+        guard let data = try? encoder.encode(debug),
+              let string = String(data: data, encoding: .utf8) else {
+            return "{}"
+        }
+        return string
     }
 }
 

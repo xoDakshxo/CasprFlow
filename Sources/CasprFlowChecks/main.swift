@@ -74,6 +74,11 @@ expect(KnowledgeFastRepliesPhaseZeroSelfCheck.contextBriefRepresentsTargetDirect
 expect(KnowledgeFastRepliesPhaseZeroSelfCheck.capturePackRepresentsSurfaces(), "capture pack represents chat, casual, and code surfaces")
 expect(KnowledgeFastRepliesPhaseZeroSelfCheck.knowledgeContextCanBeEmpty(), "empty knowledge context is valid")
 expect(KnowledgeFastRepliesPhaseZeroSelfCheck.learningEventSeparatesGeneratedAndFinalText(), "learning event separates generated and final text")
+expect(KnowledgeFastRepliesPhaseOneSelfCheck.highConfidenceSelectedTextSkipsScreenshot(), "capture pack skips screenshot for high-confidence selection")
+expect(KnowledgeFastRepliesPhaseOneSelfCheck.lowConfidenceContextAttachesOneScreenshot(), "capture pack attaches one screenshot for low confidence")
+expect(KnowledgeFastRepliesPhaseOneSelfCheck.redactionRemovesObviousSecrets(), "capture pack redacts obvious secrets")
+expect(KnowledgeFastRepliesPhaseOneSelfCheck.chromePruningDropsButtons(), "capture pack prunes chrome")
+expect(KnowledgeFastRepliesPhaseOneSelfCheck.debugJSONStaysCompact(), "capture pack debug JSON stays compact")
 
 Task { @MainActor in
     expectValue(await PhaseFiveSelfCheck.mockServiceRoundTrips(), "mock generation service round-trips chips and expansion")

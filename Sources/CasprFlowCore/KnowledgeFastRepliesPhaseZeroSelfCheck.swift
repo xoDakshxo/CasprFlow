@@ -155,6 +155,9 @@ public enum KnowledgeFastRepliesPhaseZeroSelfCheck {
             ],
             ambient: ["Demo"],
             visibleAXCandidates: ["Can you send an update?"],
+            screenshotMetadata: [
+                ScreenshotMetadata(source: "focusedInteractionRegion", windowID: 1, width: 640, height: 420)
+            ],
             screenshot: CapturePack.Screenshot(
                 metadata: ScreenshotMetadata(source: "focusedInteractionRegion", windowID: 1, width: 640, height: 420),
                 data: Data([1, 2, 3]),

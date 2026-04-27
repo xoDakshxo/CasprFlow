@@ -946,6 +946,7 @@ struct DebugContextPlaceholderView: View {
 
 struct ContextCapsuleView: View {
     let context: ScreenContext
+    private let capturePack: CapturePack
 
     @State private var isBeforeExpanded = false
     @State private var isSelectedExpanded = false
@@ -959,7 +960,16 @@ struct ContextCapsuleView: View {
     @State private var isPromptContextExpanded = false
     @State private var isSurfaceExpanded = true
     @State private var isRecentExpanded = true
+    @State private var isCapturePackExpanded = true
     @State private var isBundleJSONExpanded = false
+
+    init(context: ScreenContext) {
+        self.context = context
+        self.capturePack = CapturePackBuilder.build(
+            from: context.bundle,
+            screenshots: context.screenshotAttachments
+        )
+    }
 
     private var bundle: ScreenContextBundle { context.bundle }
 
@@ -992,6 +1002,35 @@ struct ContextCapsuleView: View {
                             metadataRow("Field role", focused.role)
                             metadataRow("Field kind", focused.fieldKind.rawValue)
                         }
+                    }
+                }
+
+                collapsibleSection(
+                    label: "Capture Pack (\(capturePack.screenshotDecision.action.rawValue), confidence \(String(format: "%.2f", capturePack.confidence)))",
+                    isExpanded: $isCapturePackExpanded
+                ) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        metadataRow("ID", capturePack.id)
+                        metadataRow("Surface", capturePack.surfaceKind.rawValue)
+                        metadataRow("Recent", "\(capturePack.recent.count)")
+                        metadataRow("Ambient", "\(capturePack.ambient.count)")
+                        metadataRow("AX candidates", "\(capturePack.visibleAXCandidates.count)")
+                        metadataRow("Screenshot decision", capturePack.screenshotDecision.reason)
+                        if let screenshot = capturePack.screenshot {
+                            metadataRow("Screenshot source", screenshot.metadata.source)
+                            metadataRow("Screenshot size", "\(screenshot.metadata.width)x\(screenshot.metadata.height)")
+                            metadataRow("Attached bytes", screenshot.data.map { "\($0.count)" })
+                        } else if !capturePack.screenshotMetadata.isEmpty {
+                            metadataRow(
+                                "Screenshot metadata",
+                                capturePack.screenshotMetadata.map(\.source).joined(separator: ", ")
+                            )
+                        }
+                        Text(capturePack.debugJSON)
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -1082,7 +1121,7 @@ struct ContextCapsuleView: View {
                                     metadataRow("Size", "\(screenshot.width)x\(screenshot.height)")
                                 }
                             }
-                            Text("Image is compressed and attached to OpenAI with AX context. OCR text is not sent.")
+                            Text("Image is compressed for the context pipeline when the capture pack attaches it. OCR text remains local/debug unless a later phase sends it explicitly.")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.tertiary)
                         }
