@@ -78,11 +78,17 @@ enum CapturePackBuilder {
         let exactChrome: Set<String> = [
             "send", "submit", "cancel", "close", "minimize", "search", "new message",
             "reply", "edit", "copy", "paste", "share", "back", "next", "done", "today",
-            "threads", "mentions", "drafts", "files", "later", "more", "home", "apps"
+            "thread", "threads", "mentions", "drafts", "files", "later", "more", "home",
+            "apps", "general"
         ]
         if exactChrome.contains(lower) { return true }
+        if lower.hasPrefix("q search:") || lower.hasPrefix("search:") { return true }
         if lower.hasPrefix("http://") || lower.hasPrefix("https://") { return true }
         if trimmed.count <= 3, !trimmed.contains("?"), !trimmed.contains("!") { return true }
+        if trimmed.hasPrefix("•"), trimmed.contains("...") { return true }
+        if trimmed.range(of: #"(?i)\((channel|direct message|workspace)\)\s+-\s+.+\s+-\s+slack$"#, options: .regularExpression) != nil {
+            return true
+        }
         if trimmed.range(of: #"^\d{1,2}:\d{2}\s?(am|pm)?$"#, options: [.regularExpression, .caseInsensitive]) != nil {
             return true
         }
@@ -107,7 +113,7 @@ enum CapturePackBuilder {
     private static func recentBlocks(
         from blocks: [ScreenContextBundle.MessageBlock]
     ) -> [ScreenContextBundle.MessageBlock] {
-        blocks.prefix(maxRecentBlocks).compactMap { block in
+        Array(blocks.compactMap { block in
             guard let text = clean(block.text, limit: maxRecentTextLength),
                   !isLikelyChrome(text) else {
                 return nil
@@ -118,7 +124,7 @@ enum CapturePackBuilder {
                 confidence: block.confidence,
                 boundingBox: block.boundingBox
             )
-        }
+        }.prefix(maxRecentBlocks))
     }
 
     private static func visibleAXCandidates(from values: [String]) -> [String] {

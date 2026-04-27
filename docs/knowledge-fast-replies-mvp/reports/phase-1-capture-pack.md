@@ -15,6 +15,8 @@ Status: Implemented, manual debug smoke pending
     - mark screenshot unavailable when confidence is low and no image exists
   - Added compact `CapturePack.debugJSON` that reports image byte count without dumping raw image data.
   - Added a `Capture Pack` section to the debug inspector.
+  - Added a screenshot preview inside the debug inspector when the pack attaches an image.
+  - Tightened Slack chrome pruning for channel/window titles, search rows, thread labels, and truncated nav text.
   - Added Phase 1 self-checks and wired them into `CasprFlowChecks`.
 - What now works:
   - A capture pack can be built locally from the current bundle.
@@ -23,6 +25,7 @@ Status: Implemented, manual debug smoke pending
   - Low-confidence context attaches at most one screenshot.
   - Obvious secrets are redacted before pack output.
   - Chrome-like AX strings are pruned.
+  - Slack channel chrome from the observed debug sample no longer becomes recent context.
 - What was intentionally skipped:
   - No `build-context` OpenAI call.
   - No `build-output` OpenAI call.
@@ -37,7 +40,7 @@ Status: Implemented, manual debug smoke pending
   - Note: the app bundle was rebuilt and re-signed, so macOS may require Accessibility permission to be granted again before hotkey smoke testing.
 - Unit tests:
   - Passed: `make test`
-  - `CasprFlowChecks` now covers screenshot skip/attach policy, redaction, chrome pruning, and compact debug JSON.
+  - `CasprFlowChecks` now covers screenshot skip/attach policy, redaction, chrome pruning, Slack chrome pruning, and compact debug JSON.
 - Manual smoke:
   - Not run in this agent session.
   - Required local smoke:
@@ -47,6 +50,8 @@ Status: Implemented, manual debug smoke pending
     - Confirm the debug inspector shows `Capture Pack`.
     - Confirm `Screenshot decision` explains attached/skipped/unavailable.
     - Confirm `Screenshot source` is focused/cursor/visible fallback when attached.
+    - Confirm the screenshot preview renders in the `Capture Pack` section.
+    - Confirm Slack channel title/search/thread chrome does not dominate `recent`.
     - Repeat in a code prompt box.
 - Docs/skills:
   - Phase stayed within scope: local capture shaping and debug visibility only.

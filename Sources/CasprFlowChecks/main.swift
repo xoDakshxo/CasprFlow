@@ -78,6 +78,7 @@ expect(KnowledgeFastRepliesPhaseOneSelfCheck.highConfidenceSelectedTextSkipsScre
 expect(KnowledgeFastRepliesPhaseOneSelfCheck.lowConfidenceContextAttachesOneScreenshot(), "capture pack attaches one screenshot for low confidence")
 expect(KnowledgeFastRepliesPhaseOneSelfCheck.redactionRemovesObviousSecrets(), "capture pack redacts obvious secrets")
 expect(KnowledgeFastRepliesPhaseOneSelfCheck.chromePruningDropsButtons(), "capture pack prunes chrome")
+expect(KnowledgeFastRepliesPhaseOneSelfCheck.slackChromeDoesNotBecomeRecentContext(), "capture pack excludes Slack chrome from recent context")
 expect(KnowledgeFastRepliesPhaseOneSelfCheck.debugJSONStaysCompact(), "capture pack debug JSON stays compact")
 
 Task { @MainActor in

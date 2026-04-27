@@ -1020,6 +1020,18 @@ struct ContextCapsuleView: View {
                             metadataRow("Screenshot source", screenshot.metadata.source)
                             metadataRow("Screenshot size", "\(screenshot.metadata.width)x\(screenshot.metadata.height)")
                             metadataRow("Attached bytes", screenshot.data.map { "\($0.count)" })
+                            if let data = screenshot.data,
+                               let image = NSImage(data: data) {
+                                Image(nsImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxHeight: 180)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .stroke(.white.opacity(0.16), lineWidth: 1)
+                                    )
+                            }
                         } else if !capturePack.screenshotMetadata.isEmpty {
                             metadataRow(
                                 "Screenshot metadata",

@@ -43,7 +43,45 @@ public enum KnowledgeFastRepliesPhaseOneSelfCheck {
         CapturePackBuilder.isLikelyChrome("Send")
             && CapturePackBuilder.isLikelyChrome("10:42 PM")
             && CapturePackBuilder.isLikelyChrome("#general")
+            && CapturePackBuilder.isLikelyChrome("Thread")
+            && CapturePackBuilder.isLikelyChrome("Q Search: in:#data-operations zoom")
+            && CapturePackBuilder.isLikelyChrome("cs-mavericks (Channel) - Nektar - Slack")
+            && CapturePackBuilder.isLikelyChrome("• cs-ma...")
             && !CapturePackBuilder.isLikelyChrome("Can you send the retry update?")
+    }
+
+    public static func slackChromeDoesNotBecomeRecentContext() -> Bool {
+        let bundle = ScreenContextBundle.assemble(
+            appName: "Slack",
+            bundleId: "com.tinyspeck.slackmacgap",
+            windowTitle: "cs-mavericks (Channel) - Nektar - Slack",
+            focusedRole: nil,
+            focusedSubrole: nil,
+            focusedValue: nil,
+            selection: nil,
+            rawAXCandidates: [
+                "cs-mavericks (Channel) - Nektar - Slack",
+                "Q Search: in:#data-operations zoom",
+                "Thread",
+                "• cs-ma...",
+                "Can you send a quick update on the Mavericks import?"
+            ],
+            ocrCandidates: [],
+            screenshots: [],
+            droppedCount: 0
+        )
+        let pack = CapturePackBuilder.build(
+            from: bundle,
+            screenshots: [],
+            id: "capture-1",
+            capturedAt: sampleDate
+        )
+        let text = (pack.recent.map(\.text) + pack.visibleAXCandidates).joined(separator: "\n")
+        return text.contains("Mavericks import")
+            && !text.contains("(Channel)")
+            && !text.contains("Q Search")
+            && !text.contains("Thread")
+            && !text.contains("cs-ma")
     }
 
     public static func debugJSONStaysCompact() -> Bool {
