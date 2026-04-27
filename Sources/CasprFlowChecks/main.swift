@@ -68,6 +68,13 @@ expect(PhaseFivePointFiveSelfCheck.menuStateTitlesReflectPermissions(), "permiss
 expect(PhaseFivePointFiveSelfCheck.permissionPanelsMapToSettingsPanes(), "permission panels map to settings panes")
 expect(PhaseFivePointFiveSelfCheck.dragSourceExposesBundleFileURL(), "permission drag source exposes bundle file URL")
 
+expect(KnowledgeFastRepliesPhaseZeroSelfCheck.replyPlanRoundTripsThroughJSON(), "reply plan round-trips through JSON")
+expect(KnowledgeFastRepliesPhaseZeroSelfCheck.replyPlanRequiresOneDraftPerChip(), "reply plan requires one draft per chip")
+expect(KnowledgeFastRepliesPhaseZeroSelfCheck.contextBriefRepresentsTargetDirections(), "context brief represents target directions")
+expect(KnowledgeFastRepliesPhaseZeroSelfCheck.capturePackRepresentsSurfaces(), "capture pack represents chat, casual, and code surfaces")
+expect(KnowledgeFastRepliesPhaseZeroSelfCheck.knowledgeContextCanBeEmpty(), "empty knowledge context is valid")
+expect(KnowledgeFastRepliesPhaseZeroSelfCheck.learningEventSeparatesGeneratedAndFinalText(), "learning event separates generated and final text")
+
 Task { @MainActor in
     expectValue(await PhaseFiveSelfCheck.mockServiceRoundTrips(), "mock generation service round-trips chips and expansion")
     expect(PhaseOneSelfCheck.canCreateReplyCapsule(), "reply capsule construction")
