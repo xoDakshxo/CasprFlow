@@ -11,7 +11,7 @@ them from scratch — wire the new code into them.
 | `CasprFlowApp/main.swift`, `AppDelegate.swift`, `CasprFlowApplication.swift` | App entry; `NSApplication` + delegate that constructs `AppCoordinator`. | Leave as-is. The app is a menu-bar/agent (`LSUIElement`-style) app. |
 | `AppCoordinator.swift` | Top-level wiring: registers the push-to-talk hotkey, owns permissions + status item, shows the prewarmed voice HUD (`startListening`/`stopListening`). | The integration point. Phase 1 grows the HUD into live voice capture; phases 2+ add the route→dispatch loop. |
 | `StatusItemController.swift` | Menu-bar item: enable/disable, permission shortcuts, quit. Hotkey label reads from `HotkeyDescriptor`. | Add menu entries here if needed; keep it light. |
-| `CasprFlowLogo.swift` | Logo image API + `CasprFlowLogoMark` SwiftUI view with a `TimelineView(.animation)` spinner. | Reuse `CasprFlowLogoMark` for the HUD's processing spinner (the sine wave morphs into it). |
+| `CasprFlowLogo.swift` | Logo image API + `CasprFlowLogoMark` SwiftUI view with a `TimelineView(.animation)` spinner. | Reuse `CasprFlowLogoMark` for the HUD's processing spinner. |
 
 ## Hotkey
 
@@ -24,7 +24,7 @@ them from scratch — wire the new code into them.
 
 | File | What it is | How to use it |
 |---|---|---|
-| `FloatingPanel.swift` | Borderless, floating, non-activating `NSPanel`. `FloatingPanel.make(size:)`, `positionCenterBottom()`, `onEscape`. Plus `HUDPlaceholderView`. | Create **once** at launch (already done in `AppCoordinator`). Phase 1 swaps its `contentView` for the live sine-wave→spinner HUD; phase 6 reuses the same shell for the always-on-top artifact window. |
+| `FloatingPanel.swift` | Borderless, floating, non-activating `NSPanel`. `FloatingPanel.make(size:)`, `positionCenterBottom()`, `onEscape`. Plus `HUDPlaceholderView`. | Create **once** at launch (already done in `AppCoordinator`). Phase 1 swaps its `contentView` for the live transcript→spinner HUD; phase 6 reuses the same shell for the always-on-top artifact window. |
 
 ## LLM connector
 
@@ -59,7 +59,7 @@ keys are listed in [`implementation/phase-1-voice-hud.md`](implementation/phase-
 
 ## To be added (not present yet)
 
-`VoiceHUDController` + `VoiceInputService` + sine-wave view (phase 1), `Intent`,
+`VoiceHUDController` + `VoiceInputService` + transcript HUD view (phase 1), `Intent`,
 `IntentRouter` (Deterministic + LLM), `ActionHandler`/`HandlerRegistry`, the handlers,
 the executor primitives (`URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`,
 `ShellRunner`, `SwarmHost`, `ArtifactWindow`). Each is specified in

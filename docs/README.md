@@ -5,8 +5,8 @@ Wispr Flow, but instead of just launching apps it **dispatches to agents and
 executes programmatic actions fast**.
 
 You **hold** a global hotkey (**Option + Space**) and speak. A small Wispr-style
-sine-wave HUD appears center-bottom while you talk; on release it morphs into the
-CasprFlow spinner while an intent router classifies the command and a handler fires
+transcript pill appears center-bottom and updates while you talk; on release it
+transitions into the CasprFlow spinner while an intent router classifies the command and a handler fires
 immediately using **programmatic methods** (URL schemes, AppleScript, CLI, deep links)
 — not vision-based computer use. There is **no text box**; voice is the input. Sub-second
 dispatch on the common path.

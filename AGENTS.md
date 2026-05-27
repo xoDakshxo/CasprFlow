@@ -14,9 +14,9 @@ voice is the only input.
 
 The interaction:
 1. Hold **Option + Space** (push-to-talk).
-2. A small **Wispr-style sine-wave HUD** appears center-bottom and reacts to your voice.
+2. A small **Wispr-style transcript HUD** appears center-bottom and updates with your words.
 3. You speak; on-device speech recognition streams the transcript.
-4. You **release**; the sine wave **morphs into the existing CasprFlow spinner** while
+4. You **release**; the pill **transitions into the existing CasprFlow spinner** while
    the intent router classifies and a handler dispatches.
 5. The action happens. Outward-facing actions (sending) are **never auto-performed** —
    we paste a draft and let the user send.

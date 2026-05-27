@@ -28,6 +28,11 @@ expect(SelectionTextNormalizer.clean(nil) == nil, "nil selected text")
 expect(SelectionTextNormalizer.clean("   \n\t  ") == nil, "empty selected text")
 expect(SelectionTextNormalizer.clean("  hello  ") == "hello", "trimmed selected text")
 
+// Voice HUD pure logic: mic RMS is clamped and normalized for animation.
+expect(VoiceLevelMeter.normalizedRMS(-1) == 0, "voice level rejects invalid low RMS")
+expect(VoiceLevelMeter.normalizedRMS(0.012) == 0, "voice level noise floor")
+expect(VoiceLevelMeter.normalizedRMS(0.22) == 1, "voice level speech ceiling")
+
 // LLM connector: config load + request body shape.
 let config = LLMConfig.load(environment: ["OPENAI_MODEL": "gpt-test", "OPENAI_REASONING_EFFORT": "medium"])
 expect(config.model == "gpt-test", "config reads OPENAI_MODEL")

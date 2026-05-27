@@ -3,36 +3,36 @@
 ## Goal
 
 The whole input surface. **No text box.** Hold Option+Space → a small Wispr-style
-**sine-wave listening animation** appears center-bottom → on-device speech recognition
-streams while you hold → release → the sine wave **morphs into the existing CasprFlow
-spinner** while the transcript is finalized. Output of this phase: a final transcript
-string handed to the dispatcher (phase 2).
+transcript HUD appears center-bottom → on-device speech recognition streams partial
+text inside the pill while you hold → release → the pill transitions into the existing
+CasprFlow spinner while the transcript is finalized. Output of this phase: a final
+transcript string handed to the dispatcher (phase 2).
 
 ## Intended feel
 
-- Tiny, unobtrusive HUD pinned center-bottom (a capsule ~240×56). Not a window you
+- Tiny, unobtrusive HUD pinned center-bottom (a capsule ~320×56). Not a window you
   interact with — a status indicator.
-- Listening = animated sine waves reacting to mic level. Processing = the CasprFlow
-  spinner (`CasprFlowLogoMark`). The transition between them should feel like a morph,
-  not a hard swap.
+- Listening = live partial transcript text inside the pill. Processing = the CasprFlow
+  spinner (`CasprFlowLogoMark`). The transition between them should feel smooth, not a
+  hard swap.
 - Zero friction: press, talk, release. No confirm step.
 
 ## Build
 
 - `Sources/CasprFlowCore/Input/VoiceHUDController.swift` — owns the prewarmed
   `FloatingPanel`, the HUD state machine (`idle → listening → processing`), and drives
-  the animation. Replaces the placeholder wiring currently in `AppCoordinator`.
+  the transcript readout. Replaces the placeholder wiring currently in `AppCoordinator`.
 - `Sources/CasprFlowCore/Input/VoiceInputService.swift` — on-device speech capture.
   `SFSpeechRecognizer` with `requiresOnDeviceRecognition = true` + `AVAudioEngine` tap
   for streaming partials and mic level. Start on press, stop on release, return the
   final transcript.
-- `Sources/CasprFlowCore/Input/SineWaveView.swift` — the listening animation, driven by
-  mic level (RMS) from the audio tap. Morphs into `CasprFlowLogoMark` on `processing`.
+- `Sources/CasprFlowCore/Input/TranscriptHUDView.swift` — the live partial transcript
+  readout. Transitions into `CasprFlowLogoMark` on `processing`.
 
 ## Contracts
 
 ```swift
-enum VoiceHUDState { case idle, listening(level: Float), processing }
+enum VoiceHUDState { case idle, listening, processing }
 
 @MainActor
 final class VoiceHUDController {
@@ -74,12 +74,12 @@ into the existing permission guide if convenient (see the kept `Permissions/` st
 
 On-device recognition only — no network. Partial results stream during the hold, so on
 release the final transcript is essentially ready. Keep the audio engine setup off the
-hotkey path if possible (warm it lazily but quickly). Show the sine wave instantly on
-press; show the spinner instantly on release.
+hotkey path if possible (warm it lazily but quickly). Show the transcript HUD instantly
+on press; show the spinner instantly on release.
 
 ## Acceptance
 
-- Hold the hotkey → sine-wave HUD appears center-bottom and reacts to your voice.
-- Release → it morphs into the CasprFlow spinner; the recognized transcript is logged.
+- Hold the hotkey → transcript HUD appears center-bottom and updates with your words.
+- Release → it transitions into the CasprFlow spinner; the recognized transcript is logged.
 - Denying mic/speech shows a clear HUD error, not a crash.
 - `swift build` green, `CasprFlowChecks` passes.
