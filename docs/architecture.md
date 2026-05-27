@@ -38,7 +38,7 @@ Hold Option+Space (push-to-talk)
    │  press                                    release
    ▼                                              │
 VoiceHUDController ── prewarmed FloatingPanel, center-bottom, small
-   │  listening: sine-wave animation (mic level)  │
+   │  listening: live partial transcript pill     │
    │  VoiceInputService: on-device SFSpeechRecognizer, streaming partials
    ▼  (on release → final transcript)             ▼ processing: CasprFlow spinner
 IntentRouter
@@ -62,7 +62,7 @@ ActionResult → HUD dismisses / brief result toast
 
 | Component | Responsibility | State |
 |---|---|---|
-| `VoiceHUDController` | Own the prewarmed HUD panel; drive the sine-wave→spinner states; emit the final transcript into the route→dispatch loop. | **to build** (phase 1) |
+| `VoiceHUDController` | Own the prewarmed HUD panel; drive the transcript→spinner states; emit the final transcript into the route→dispatch loop. | **to build** (phase 1) |
 | `VoiceInputService` | On-device streaming STT + mic level; start on press, stop on release. | **to build** (phase 1) |
 | `Intent` | Value type: `kind` (enum) + `slots: [String: String]` + `confidence`. | **to build** (phase 2) |
 | `IntentRouter` | Tier-0 deterministic + Tier-1 LLM fallback; returns an `Intent`. | **to build** (phase 2, 7) |
@@ -81,9 +81,9 @@ See [`connectors.md`](connectors.md) for exact file paths and usage of the kept 
 ## Data flow (one dispatch)
 
 1. Hotkey **pressed** → `VoiceHUDController` shows the prewarmed HUD (no allocation) and
-   starts on-device capture; the sine wave reacts to mic level.
+   starts on-device capture; partial transcript text updates in the pill.
 2. User speaks while holding; partials stream locally.
-3. Hotkey **released** → capture stops, the HUD morphs to the spinner, the final
+3. Hotkey **released** → capture stops, the HUD transitions to the spinner, the final
    transcript goes to `IntentRouter`.
 4. Tier-0 deterministic match returns an `Intent` synchronously. Only on a miss does
    Tier-1 hit the network.

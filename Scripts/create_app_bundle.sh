@@ -49,8 +49,12 @@ cat > "${CONTENTS_DIR}/Info.plist" <<'PLIST'
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>CasprFlow listens when you hold the hotkey.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>CasprFlow transcribes your command on-device.</string>
 </dict>
 </plist>
 PLIST

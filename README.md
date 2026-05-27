@@ -8,9 +8,9 @@ hold Option + Space  ->  speak  ->  release  ->  intent router  ->  programmatic
 
 Raycast + Wispr Flow, but instead of just launching apps it **dispatches to agents and
 executes programmatic actions fast** (URL schemes, AppleScript, deep links, CLI) — never
-vision-based computer use. There is **no text box**: a small Wispr-style sine-wave HUD
-appears center-bottom while you talk, then morphs into the CasprFlow spinner while the
-command is classified and dispatched. Sub-second on the common path.
+vision-based computer use. There is **no text box**: a small Wispr-style transcript pill
+appears center-bottom while you talk, then transitions into the CasprFlow spinner while
+the command is classified and dispatched. Sub-second on the common path.
 
 It's a **universal dispatcher**, not a launcher for a fixed set of apps. App-agnostic
 executor primitives compose into thin handlers. Reference flows:

@@ -25,6 +25,8 @@ let package = Package(
             name: "CasprFlowCore",
             linkerSettings: [
                 .linkedFramework("AppKit"),
+                .linkedFramework("AVFAudio"),
+                .linkedFramework("AVFoundation"),
                 .linkedFramework("Carbon"),
                 .linkedFramework("ApplicationServices"),
                 .linkedFramework("Speech")

@@ -60,7 +60,7 @@ public final class FloatingPanel: NSPanel {
 }
 
 /// Temporary placeholder content for the HUD. Replaced in phase 1 by the live
-/// sine-wave listening animation that morphs into the `CasprFlowLogoMark` spinner.
+/// transcript readout that transitions into the `CasprFlowLogoMark` spinner.
 public struct HUDPlaceholderView: View {
     let message: String
 
