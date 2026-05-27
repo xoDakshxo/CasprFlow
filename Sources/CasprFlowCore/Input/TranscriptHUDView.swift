@@ -92,10 +92,12 @@ struct VoiceHUDView: View {
     }
 
     private var processingReadout: some View {
-        HStack(spacing: 8) {
-            CasprFlowLoadingLogoMark(size: model.hasTranscript ? 16 : 22)
+        let hasTranscript = model.hasTranscript
 
-            if model.hasTranscript {
+        return HStack(spacing: 8) {
+            CasprFlowLoadingLogoMark(size: hasTranscript ? 16 : 22)
+
+            if hasTranscript {
                 Text(readoutText)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.primary)
@@ -103,9 +105,9 @@ struct VoiceHUDView: View {
                     .minimumScaleFactor(0.72)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-            }
+                }
         }
-        .padding(.horizontal, model.hasTranscript ? 16 : 0)
+        .padding(.horizontal, hasTranscript ? 16 : 0)
     }
 
     private func resultReadout(_ message: String) -> some View {

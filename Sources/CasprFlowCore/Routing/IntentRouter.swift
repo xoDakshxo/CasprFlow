@@ -138,8 +138,7 @@ public struct DeterministicRouter: IntentRouter {
     }
 
     public static func normalize(_ text: String) -> String {
-        let cleaned = SelectionTextNormalizer.clean(text) ?? ""
-        return cleaned
+        text
             .lowercased()
             .split(whereSeparator: { $0.isWhitespace })
             .joined(separator: " ")
