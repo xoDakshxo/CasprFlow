@@ -6,14 +6,14 @@ public final class VoiceHUDController {
     private let panel: FloatingPanel
     private let model = VoiceHUDModel()
     private let voiceInputService: VoiceInputService
-    private let onTranscript: (String) -> Void
+    private let onTranscript: @MainActor (String) async -> ActionResult
 
     private var isHolding = false
     private var captureTask: Task<Void, Never>?
     private var stopTask: Task<Void, Never>?
     private var errorDismissTask: Task<Void, Never>?
 
-    public init(onTranscript: @escaping (String) -> Void) {
+    public init(onTranscript: @escaping @MainActor (String) async -> ActionResult) {
         self.onTranscript = onTranscript
         self.voiceInputService = VoiceInputService()
 
@@ -91,9 +91,21 @@ public final class VoiceHUDController {
             if !transcript.isEmpty {
                 model.partialTranscript = transcript
             }
-            onTranscript(transcript)
 
-            let dismissDelay: UInt64 = transcript.isEmpty ? 220_000_000 : 650_000_000
+            let result = await onTranscript(transcript)
+            guard !Task.isCancelled else { return }
+            guard result.ok else {
+                self.fail(result.message ?? "Didn't catch that.")
+                return
+            }
+
+            if let message = result.message {
+                setState(.result(message: message))
+            }
+
+            let dismissDelay: UInt64 = result.message == nil
+                ? (transcript.isEmpty ? 220_000_000 : 650_000_000)
+                : 900_000_000
             try? await Task.sleep(nanoseconds: dismissDelay)
             guard !Task.isCancelled else { return }
             self.dismiss()
@@ -147,7 +159,7 @@ public final class VoiceHUDController {
         switch model.state {
         case .listening, .processing:
             return true
-        case .idle, .error:
+        case .idle, .result, .error:
             return false
         }
     }

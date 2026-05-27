@@ -36,13 +36,13 @@ allocation. See [`latency.md`](latency.md) for the contract and the tactics.
 
 ## Status
 
-This repo is at the **post-pivot skeleton** stage:
+This repo is in the phased dispatcher build:
 
 - The retired "knowledge fast replies" reply-capsule product has been stripped.
 - The native shell + connectors are kept and clean (see [`connectors.md`](connectors.md)).
-- The dispatcher (command bar, intent router, action handlers, voice, swarm) is
-  **not built yet** — it is specified phase-by-phase in
-  [`implementation/`](implementation/README.md) for a Codex-driven build.
+- Voice input and the deterministic intent router/handler registry are built.
+- Real executor primitives, action handlers, swarm, artifact window, and LLM fallback
+  remain sequenced in [`implementation/`](implementation/README.md).
 
 ## How to run
 

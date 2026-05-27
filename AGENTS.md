@@ -54,12 +54,15 @@ Three reference flows (these are **examples that prove the primitives, not the s
 6. `docs/implementation/README.md` — the phase queue. **This is the execution source of
    truth.** Work one phase at a time.
 
-## The codebase right now (post-pivot skeleton)
+## The codebase right now
 
-The old "knowledge fast replies" reply-capsule product was **scrapped**. What remains is
-a clean native shell + connectors, building green:
+The old "knowledge fast replies" reply-capsule product was **scrapped**. The native
+shell + connectors are kept, and the phased dispatcher build is underway:
 - Menu-bar app launches; **Option+Space is push-to-talk** (press/release wired in
-  `HotkeyService` + `AppCoordinator`); a placeholder center-bottom HUD shows on hold.
+  `HotkeyService` + `AppCoordinator`); the center-bottom voice HUD streams on-device
+  transcript text and hands the final transcript into the dispatcher.
+- Phase 2 adds the deterministic router, intent model, handler protocol/registry, and
+  route→dispatch loop with a logging stub until real handlers arrive in phase 3.
 - Kept connectors: `HotkeyService`, `FloatingPanel` (HUD/artifact shell), `PasteService`,
   `CasprFlowLogo`/`CasprFlowLogoMark` (spinner), `LLMClient` (OpenAI text client), the
   full permission stack (Accessibility + Screen Recording, **including the

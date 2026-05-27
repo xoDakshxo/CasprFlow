@@ -39,11 +39,11 @@ strict structured output, `reasoning.effort = low`, tiny `max_output_tokens`. Ch
 for zero new setup. A faster provider (Groq/Cerebras) or a local classifier can swap
 in later behind the same `IntentRouter` seam if Tier-1 latency matters.
 
-## D5 — Input: voice + text, on-device STT
+## D5 — Input: voice only, on-device STT
 
 Push-to-talk voice via Apple `SFSpeechRecognizer` with `requiresOnDeviceRecognition =
-true`, streaming partial results into the command field; plus plain text entry. On-
-device keeps the voice path off the network.
+true`, streaming partial results into the HUD. There is no text box. On-device keeps
+the voice path off the network.
 
 ## D6 — Agent swarm via a swappable `SwarmHost` (Warp is one impl)
 

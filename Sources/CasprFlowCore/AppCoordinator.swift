@@ -4,12 +4,14 @@ import AppKit
 ///
 /// This is the post-pivot skeleton: it registers the global hotkey, owns the
 /// permission + status-item plumbing, and owns the prewarmed voice HUD. The
-/// route→dispatch loop is wired in on top of this shell during later phases.
+/// phase-2 route→dispatch loop is wired in on top of this shell.
 @MainActor
 final class AppCoordinator {
     private let hotkeyService = HotkeyService()
     private let permissionService = AccessibilityPermissionService()
     private let screenRecordingPermissionService = ScreenRecordingPermissionService()
+    private let intentRouter: any IntentRouter = DeterministicRouter()
+    private let handlerRegistry = HandlerRegistry(handlers: [Phase2LoggingHandler()])
     private lazy var permissionGuideController = PermissionGuideController(
         accessibilityPermissionService: permissionService,
         screenRecordingPermissionService: screenRecordingPermissionService,
@@ -18,16 +20,15 @@ final class AppCoordinator {
         }
     )
 
-    private let voiceHUDController: VoiceHUDController
+    private lazy var voiceHUDController = VoiceHUDController { [weak self] transcript in
+        guard let self else {
+            return ActionResult(ok: false, message: "Voice input failed. Try again.")
+        }
+
+        return await self.routeAndDispatch(transcript)
+    }
     private var statusItemController: StatusItemController?
     private var isEnabled = true
-
-    init() {
-        voiceHUDController = VoiceHUDController { transcript in
-            let loggedTranscript = transcript.isEmpty ? "<empty>" : transcript
-            NSLog("[CasprFlow] Voice transcript: %@", loggedTranscript)
-        }
-    }
 
     func start() {
         statusItemController = StatusItemController(
@@ -91,8 +92,43 @@ final class AppCoordinator {
         voiceHUDController.endListening()
     }
 
+    private func routeAndDispatch(_ transcript: String) async -> ActionResult {
+        let loggedTranscript = transcript.isEmpty ? "<empty>" : transcript
+        NSLog("[CasprFlow] Voice transcript: %@", loggedTranscript)
+
+        let intent = await intentRouter.route(transcript)
+        NSLog(
+            "[CasprFlow] Routed intent: kind=%@ confidence=%.2f slots=%@",
+            intent.kind.rawValue,
+            intent.confidence,
+            String(describing: intent.slots)
+        )
+
+        guard intent.kind != .unknown else {
+            return ActionResult(ok: false, message: "Didn't catch that.")
+        }
+
+        let result = await handlerRegistry.dispatch(intent)
+        NSLog(
+            "[CasprFlow] Dispatch result: ok=%@ message=%@",
+            result.ok ? "true" : "false",
+            result.message ?? ""
+        )
+        return result
+    }
+
     private func showPermissionGuide(_ panel: PermissionGuidePanel) {
         permissionGuideController.present(panel: panel)
         statusItemController?.refresh()
+    }
+}
+
+private struct Phase2LoggingHandler: ActionHandler {
+    func match(_ intent: Intent) -> Bool {
+        intent.kind != .unknown
+    }
+
+    func execute(_ intent: Intent) async throws -> ActionResult {
+        ActionResult(ok: true, message: "Routed: \(intent.kind.rawValue)")
     }
 }

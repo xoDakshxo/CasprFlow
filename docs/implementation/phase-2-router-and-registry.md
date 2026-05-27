@@ -44,9 +44,10 @@ final class HandlerRegistry {
 
 Normalize first (lowercase, trim, collapse whitespace). Then, in order:
 
+- `^(get me|show me) (?<query>.+) from google` → `.browserSearch` (`engine=google`)
 - `^(search|google|look up|find) (?<query>.+)` → `.browserSearch`
 - `^(spin up|start|launch) (?<count>\d+|a|one|two|…) agents?.* (refactor|fix|do|build) (?<task>.+)` → `.agentSwarm`
-- `^(reply|respond|tell|message) (?<recipient>\w+) (that |saying |with )?(?<message>.+)` → `.slackReply`
+- `^(reply|respond|tell|message)( to)? (?<recipient>\w+) (that |saying |with )?(?<message>.+)` → `.slackReply`
 - `^(open|launch|go to) (?<app>.+)` → `.openApp` (or `.openURL` if it parses as a URL/domain)
 - `^(run|execute) (?<command>.+)` → `.shell`
 - else → `.unknown`
@@ -57,7 +58,9 @@ Keep rules data-driven and easy to extend. Spoken numbers ("five") → digits.
 
 `VoiceHUDController.onTranscript` → `router.route(text)` → `registry.dispatch(intent)`.
 Show the spinner during `route`+`dispatch`; on result, dismiss the HUD (or flash a
-toast). For `.unknown`, show a brief "didn't catch that" HUD state.
+toast). For `.unknown`, show a brief "didn't catch that" HUD state. Until phase 3 adds
+real handlers, the app registry uses a visible logging stub handler (`Routed: <kind>`)
+so recognized intents prove the dispatch loop without performing external actions.
 
 ## Reuse
 

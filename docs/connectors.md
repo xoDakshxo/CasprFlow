@@ -57,10 +57,13 @@ This whole flow is preserved intentionally (including the drag-into-Settings sou
 Voice adds two more system prompts (Microphone + Speech Recognition); the Info.plist
 keys are listed in [`implementation/phase-1-voice-hud.md`](implementation/phase-1-voice-hud.md#permissions--bundle).
 
-## To be added (not present yet)
+## Added by the phased build
 
-`VoiceHUDController` + `VoiceInputService` + transcript HUD view (phase 1), `Intent`,
-`IntentRouter` (Deterministic + LLM), `ActionHandler`/`HandlerRegistry`, the handlers,
-the executor primitives (`URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`,
-`ShellRunner`, `SwarmHost`, `ArtifactWindow`). Each is specified in
+- Phase 1: `VoiceHUDController`, `VoiceInputService`, transcript HUD view.
+- Phase 2: `Intent`, deterministic `IntentRouter`, `ActionHandler`, `HandlerRegistry`,
+  and the route→dispatch loop.
+
+Still to be added: real action handlers, the executor primitives
+(`URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`, `ShellRunner`, `SwarmHost`,
+`ArtifactWindow`), and the phase-7 LLM router fallback. Each is specified in
 [`implementation/`](implementation/README.md).

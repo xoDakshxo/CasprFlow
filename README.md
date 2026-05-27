@@ -22,10 +22,11 @@ executor primitives compose into thin handlers. Reference flows:
 - "Get this doc ready for Prachi" → a SQL agent streams a query into a floating
   artifact window; click Run; it executes against ClickHouse.
 
-## Status: post-pivot skeleton
+## Status
 
 The previous reply-capsule product was scrapped. The native shell + connectors are kept
-and building green; the dispatcher is specified phase-by-phase for a Codex-driven build.
+and building green. Voice input plus the deterministic intent router/handler registry
+are built; real executors and handlers continue in the remaining implementation phases.
 
 ## Docs
 

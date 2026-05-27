@@ -62,11 +62,11 @@ ActionResult → HUD dismisses / brief result toast
 
 | Component | Responsibility | State |
 |---|---|---|
-| `VoiceHUDController` | Own the prewarmed HUD panel; drive the transcript→spinner states; emit the final transcript into the route→dispatch loop. | **to build** (phase 1) |
-| `VoiceInputService` | On-device streaming STT + mic level; start on press, stop on release. | **to build** (phase 1) |
-| `Intent` | Value type: `kind` (enum) + `slots: [String: String]` + `confidence`. | **to build** (phase 2) |
-| `IntentRouter` | Tier-0 deterministic + Tier-1 LLM fallback; returns an `Intent`. | **to build** (phase 2, 7) |
-| `ActionHandler` / `HandlerRegistry` | Protocol + ordered registry; first match executes. | **to build** (phase 2) |
+| `VoiceHUDController` | Own the prewarmed HUD panel; drive the transcript→spinner states; emit the final transcript into the route→dispatch loop. | **built** (phase 1) |
+| `VoiceInputService` | On-device streaming STT + mic level; start on press, stop on release. | **built** (phase 1) |
+| `Intent` | Value type: `kind` (enum) + `slots: [String: String]` + `confidence`. | **built** (phase 2) |
+| `IntentRouter` | Tier-0 deterministic now; Tier-1 LLM fallback later behind the same seam. | **built** (phase 2 deterministic; phase 7 LLM) |
+| `ActionHandler` / `HandlerRegistry` | Protocol + ordered registry; first match executes. | **built** (phase 2) |
 | Handlers | One per action class; programmatic execution. | **to build** (phase 3–6) |
 | Executors | `URLSchemeLauncher`, `AppleScriptRunner`, `ShellRunner`, `SwarmHost`. | **to build** (phase 3–4) |
 | `LLMClient` | Text-only OpenAI Responses client + config + preconnect. | **kept** |
