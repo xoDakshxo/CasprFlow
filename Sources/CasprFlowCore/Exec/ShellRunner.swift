@@ -39,15 +39,17 @@ public enum ShellCommandPolicy {
         "swift --version",
         "whoami"
     ]
-    private static let blockedShellSyntax = [";", "&&", "||", "|", "`", "$(", ">", "<"]
+    private static let blockedShellSyntax = [";", "&&", "||", "|", "`", "$(", ">", "<", "\n", "\r"]
 
     public static func isAllowed(_ command: String) -> Bool {
-        let normalized = DeterministicRouter.normalize(command)
-        guard !normalized.isEmpty else { return false }
-        guard !blockedShellSyntax.contains(where: { normalized.contains($0) }) else {
+        guard let cleanedCommand = SelectionTextNormalizer.clean(command) else {
+            return false
+        }
+        guard !blockedShellSyntax.contains(where: { cleanedCommand.contains($0) }) else {
             return false
         }
 
+        let normalized = DeterministicRouter.normalize(cleanedCommand)
         return allowedPrefixes.contains { prefix in
             normalized == prefix || normalized.hasPrefix("\(prefix) ")
         }
@@ -97,11 +99,16 @@ public struct ShellRunner: Sendable {
                 }
 
                 do {
+                    guard !Task.isCancelled else {
+                        throw CancellationError()
+                    }
                     try box.process.run()
                 } catch {
                     if box.markCompleted() {
                         continuation.resume(
-                            throwing: ShellRunnerError.launchFailed(error.localizedDescription)
+                            throwing: error is CancellationError
+                                ? error
+                                : ShellRunnerError.launchFailed(error.localizedDescription)
                         )
                     }
                     return
@@ -109,6 +116,7 @@ public struct ShellRunner: Sendable {
 
                 Task {
                     try? await Task.sleep(nanoseconds: Self.timeoutNanoseconds(timeout))
+                    guard !Task.isCancelled else { return }
                     guard box.markCompleted() else { return }
                     box.terminateIfRunning()
                     continuation.resume(throwing: ShellRunnerError.timedOut(timeout))

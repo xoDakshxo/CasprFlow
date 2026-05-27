@@ -129,6 +129,8 @@ expect(
 expect(ShellCommandPolicy.isAllowed("git status --short"), "shell policy allows safe git status")
 expect(!ShellCommandPolicy.isAllowed("rm -rf /"), "shell policy blocks destructive command")
 expect(!ShellCommandPolicy.isAllowed("echo ok; rm -rf /"), "shell policy blocks shell chaining")
+expect(!ShellCommandPolicy.isAllowed("git status\nrm -rf /"), "shell policy blocks newline chaining")
+expect(!ShellCommandPolicy.isAllowed("git status\rrm -rf /"), "shell policy blocks carriage-return chaining")
 
 // LLM connector: config load + request body shape.
 let config = LLMConfig.load(environment: ["OPENAI_MODEL": "gpt-test", "OPENAI_REASONING_EFFORT": "medium"])

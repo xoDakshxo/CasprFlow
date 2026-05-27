@@ -119,7 +119,9 @@ public struct AppLauncher: Sendable {
         let appName = candidate.hasSuffix(".app") ? candidate : "\(candidate).app"
         let searchDirectories = [
             URL(fileURLWithPath: "/Applications"),
+            URL(fileURLWithPath: "/Applications/Utilities"),
             URL(fileURLWithPath: "/System/Applications"),
+            URL(fileURLWithPath: "/System/Applications/Utilities"),
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")
         ]
 
