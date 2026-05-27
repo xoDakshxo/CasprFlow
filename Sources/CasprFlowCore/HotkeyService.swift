@@ -13,10 +13,19 @@ final class HotkeyService {
 
     private var eventHandlerRef: EventHandlerRef?
     private var hotkeyRef: EventHotKeyRef?
-    private var handler: (() -> Void)?
+    private var onPress: (() -> Void)?
+    private var onRelease: (() -> Void)?
 
+    /// Register the default hotkey as a simple trigger (press only).
     func registerDefaultHotkey(handler: @escaping () -> Void) throws {
-        self.handler = handler
+        try registerDefaultHotkey(onPress: handler, onRelease: nil)
+    }
+
+    /// Register the default hotkey as **push-to-talk**: `onPress` fires on key-down
+    /// (start listening), `onRelease` fires on key-up (stop listening → process).
+    func registerDefaultHotkey(onPress: @escaping () -> Void, onRelease: (() -> Void)?) throws {
+        self.onPress = onPress
+        self.onRelease = onRelease
         try installEventHandlerIfNeeded()
         try registerHotkey(HotkeyDescriptor.defaultHotkey)
     }
@@ -36,10 +45,16 @@ final class HotkeyService {
     private func installEventHandlerIfNeeded() throws {
         guard eventHandlerRef == nil else { return }
 
-        var eventType = EventTypeSpec(
-            eventClass: OSType(kEventClassKeyboard),
-            eventKind: UInt32(kEventHotKeyPressed)
-        )
+        var eventTypes = [
+            EventTypeSpec(
+                eventClass: OSType(kEventClassKeyboard),
+                eventKind: UInt32(kEventHotKeyPressed)
+            ),
+            EventTypeSpec(
+                eventClass: OSType(kEventClassKeyboard),
+                eventKind: UInt32(kEventHotKeyReleased)
+            )
+        ]
 
         var installedHandler: EventHandlerRef?
         let status = InstallEventHandler(
@@ -47,13 +62,14 @@ final class HotkeyService {
             { _, event, userData in
                 guard let userData else { return noErr }
                 let service = Unmanaged<HotkeyService>.fromOpaque(userData).takeUnretainedValue()
+                let kind = event.map { GetEventKind($0) } ?? 0
                 Task { @MainActor in
-                    service.handleHotkeyEvent(event)
+                    service.handleHotkeyEvent(event, kind: kind)
                 }
                 return noErr
             },
-            1,
-            &eventType,
+            eventTypes.count,
+            &eventTypes,
             Unmanaged.passUnretained(self).toOpaque(),
             &installedHandler
         )
@@ -91,7 +107,7 @@ final class HotkeyService {
         hotkeyRef = registeredHotkey
     }
 
-    private func handleHotkeyEvent(_ event: EventRef?) {
+    private func handleHotkeyEvent(_ event: EventRef?, kind: UInt32) {
         guard let event else { return }
         var eventHotkeyID = EventHotKeyID()
         let status = GetEventParameter(
@@ -110,7 +126,14 @@ final class HotkeyService {
             return
         }
 
-        handler?()
+        switch Int(kind) {
+        case kEventHotKeyPressed:
+            onPress?()
+        case kEventHotKeyReleased:
+            onRelease?()
+        default:
+            break
+        }
     }
 }
 

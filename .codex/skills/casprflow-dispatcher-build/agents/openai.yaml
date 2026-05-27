@@ -1,0 +1,4 @@
+interface:
+  display_name: "CasprFlow Dispatcher Build"
+  short_description: "Build the CasprFlow macOS voice agent dispatcher"
+  default_prompt: "Use $casprflow-dispatcher-build to implement the next CasprFlow phase from docs/implementation."

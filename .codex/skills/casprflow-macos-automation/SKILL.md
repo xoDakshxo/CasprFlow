@@ -1,103 +1,83 @@
 ---
 name: casprflow-macos-automation
-description: Implement or debug CasprFlow native macOS automation. Use for AppKit/SwiftUI menu-bar behavior, fixed global hotkey registration, selected-text capture, clipboard preservation, Accessibility/Input Monitoring permissions, focus restoration, synthetic paste, borderless reply capsule windows, and paste-into-active-app bugs.
+description: Implement or debug CasprFlow native macOS mechanics. Use for AppKit/SwiftUI menu-bar behavior, push-to-talk global hotkey (press+release), on-device speech capture, the center-bottom voice HUD panel, programmatic action execution (URL schemes, AppleScript, deep links, CLI via Process), synthetic paste + clipboard preservation, Accessibility/Microphone/Speech permissions, and the drag-into-Settings permission flow.
 ---
 
 # CasprFlow macOS Automation
 
 ## Scope
 
-Use this skill for the OS-facing pieces of CasprFlow. Keep it focused on native Mac mechanics, not product strategy or model prompting.
+The OS-facing mechanics of CasprFlow. Native Mac plumbing, not product strategy or
+model prompting.
 
-## Required Patterns
+## Required patterns
 
-- Use Swift and AppKit for OS integration.
-- Use SwiftUI only for small visible UI where it is faster.
-- Run as a menu-bar/background app.
-- Use `NSStatusItem` for the menu.
-- Use `NSPanel` for the reply capsule.
-- Use Accessibility APIs for selected-text capture.
-- Use `NSPasteboard` only for final paste fallback.
-- Use synthetic `Command + V` pragmatically.
-- Save the previous active app before opening the capsule.
-- Return focus before paste.
-- Restore clipboard best-effort; do not block the MVP on perfect clipboard restoration.
+- Swift + AppKit for OS integration; SwiftUI for the small visible HUD only.
+- Menu-bar/background app (`NSStatusItem`).
+- `NSPanel` (via the kept `FloatingPanel`) for the voice HUD and the artifact window.
+- On-device `SFSpeechRecognizer` (`requiresOnDeviceRecognition = true`) + `AVAudioEngine`
+  for streaming transcript + mic level. No cloud STT.
+- `NSPasteboard` + synthetic Cmd+V (the kept `PasteService`) for paste-into-app output.
+- Programmatic execution only — `NSWorkspace.open` (URLs/apps), `NSAppleScript`/`osascript`,
+  deep links, `Process` (CLI). **Never** screenshot→model→click.
 
-## Hotkey
+## Hotkey (push-to-talk)
 
-MVP uses a fixed hotkey:
+- Fixed hotkey: **Option + Space**. No picker.
+- Registered via the kept `HotkeyService` using Carbon `RegisterEventHotKey` with **both**
+  `kEventHotKeyPressed` and `kEventHotKeyReleased`:
+  `registerDefaultHotkey(onPress:onRelease:)`.
+- Press = begin listening (show HUD, start capture). Release = stop capture, show spinner,
+  hand the transcript to the router.
+- A press-only `registerDefaultHotkey(handler:)` overload remains for non-PTT uses.
 
-- Use `Option + Space`.
-- Register it at launch.
-- Show a simple error if registration fails.
-- Do not build a hotkey picker.
-- Do not add a full settings screen.
+## Voice HUD
 
-## Selected Text Capture
+A tiny center-bottom indicator, not an interactive window:
 
-Use this flow:
+- Built on `FloatingPanel` (`make(size:)`, `positionCenterBottom()`), prewarmed once.
+- Listening state: a sine-wave animation driven by mic RMS level.
+- Processing state: the existing `CasprFlowLogoMark` spinner. The sine wave should *morph*
+  into the spinner, not hard-swap.
+- Escape dismisses. No text field.
 
-1. Capture the frontmost app's focused accessibility element.
-2. Read `kAXSelectedTextAttribute`.
-3. If needed, derive selected text from `kAXValueAttribute` plus `kAXSelectedTextRangeAttribute`.
-4. Do not use `Command + C` or `NSPasteboard` to read selected text.
-5. If selected text is empty, show the capsule with `Highlight a message first.`
+## Paste flow (output)
 
-Use `.casprflow-temp/axii/Axii/Services/Paste/FocusSnapshot.swift` as the local reference for this pattern.
+1. Capture final text (verbatim dictation, or a short drafted reply).
+2. `PasteService.paste(text, into: targetPID)` — it snapshots the pasteboard, sets text,
+   reactivates the target app, sends synthetic Cmd+V, and restores the pasteboard.
+3. **Never send automatically.** The user presses send.
 
-## Reply Capsule
+## Programmatic execution
 
-The capsule should feel like a small inline command bubble:
+- Open URL/deep link: `NSWorkspace.shared.open(url)`.
+- Launch/focus app: `NSWorkspace.shared.openApplication` or by bundle id.
+- Scriptable apps / window control: `NSAppleScript` or `osascript` via `Process`.
+- CLI / agents / `clickhouse-client`: `Process` with captured stdout/stderr + timeout.
+  Resolve full tool paths (`~/.local/bin/claude`, `/opt/homebrew/bin/codex`).
 
-- borderless floating `NSPanel`
-- one focused editable text control
-- max 3-4 visible lines
-- subtle learned label when available
-- footer text: `Enter paste | Cmd+R regenerate | Esc`
+## Permissions
 
-Keyboard behavior:
+Kept blunt and minimal, and **preserve the drag-the-app-into-Settings flow**
+(`Permissions/PermissionDragSourceView.swift` + `PermissionGuideController`):
 
-- `Enter`: paste current text
-- `Command + R`: regenerate from current edited text
-- `Escape`: close without paste
+- **Accessibility** — required for synthetic key events / paste.
+- **Microphone** + **Speech Recognition** — required for voice; add the Info.plist usage
+  strings (`NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`) in
+  `Scripts/create_app_bundle.sh`. Surface a clear HUD error if denied.
+- Show plain permission-needed states; no complex onboarding.
 
-Avoid modal windows, side panels, document editor styling, and large overlays.
+## Latency
 
-## Paste Flow
+- Prewarm the HUD panel once; show is `orderFrontRegardless` + position only.
+- Show the listening HUD on press and the spinner on release with no work in between.
+- Keep the audio engine warm-but-cheap so capture starts instantly on press.
 
-Use this sequence:
+## Common failure checks
 
-1. Capture final capsule text.
-2. Store learning if final text differs from generated text.
-3. Put final text on pasteboard.
-4. Reactivate previous app.
-5. Send synthetic `Command + V`.
-6. Close the capsule.
-7. Restore prior pasteboard best-effort after a short delay.
-
-Never send the message automatically.
-
-## Permission Handling
-
-Keep permissions blunt and minimal:
-
-- Accessibility is required for synthetic key events and focus/paste behavior.
-- Input Monitoring may be required depending on the chosen hotkey implementation.
-- Show a plain permission-needed state.
-- Do not build complex onboarding.
-
-## Common Failure Checks
-
-If hotkey works but paste fails:
-
-- verify Accessibility permission
-- verify previous app is restored before paste
-- verify the focused field accepts paste
-- verify the pasteboard contains the final reply before `Command + V`
-
-If capture returns empty:
-
-- verify text was selected
-- verify Accessibility permission
-- inspect the focused element role/value/range path
-- do not add clipboard-based copy capture without explicit approval
+- Hotkey fires but no release event: confirm both pressed+released event kinds are
+  installed in `HotkeyService`.
+- Paste fails: verify Accessibility granted, target app reactivated before Cmd+V, the
+  field accepts paste, and the pasteboard holds the final text.
+- No transcript: verify Microphone + Speech permission, on-device recognizer availability,
+  and that the audio tap is installed before `start`.

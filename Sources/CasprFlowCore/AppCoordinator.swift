@@ -1,11 +1,18 @@
 import AppKit
+import SwiftUI
 
+/// Top-level wiring for the CasprFlow menu-bar app.
+///
+/// This is the post-pivot skeleton: it registers the global hotkey, owns the
+/// permission + status-item plumbing, and shows a prewarmed command-bar panel.
+/// The dispatcher itself (input field, intent router, action handlers) is wired
+/// in on top of this shell during the implementation phases — see
+/// `docs/implementation/`.
 @MainActor
 final class AppCoordinator {
     private let hotkeyService = HotkeyService()
     private let permissionService = AccessibilityPermissionService()
     private let screenRecordingPermissionService = ScreenRecordingPermissionService()
-    private lazy var selectionCaptureService = SelectionCaptureService(permissionService: permissionService)
     private lazy var permissionGuideController = PermissionGuideController(
         accessibilityPermissionService: permissionService,
         screenRecordingPermissionService: screenRecordingPermissionService,
@@ -13,14 +20,29 @@ final class AppCoordinator {
             self?.statusItemController?.refresh()
         }
     )
-    private let capsuleController = ReplyCapsuleController()
+
+    /// Prewarmed once at launch so invoking the hotkey costs no allocation.
+    /// The small center-bottom voice HUD (sine-wave listening → spinner).
+    private let hud: FloatingPanel
+    private let hudHostingView: NSHostingView<AnyView>
     private var statusItemController: StatusItemController?
     private var isEnabled = true
+    private var isListening = false
+
+    init() {
+        let size = NSSize(width: 240, height: 56)
+        hud = FloatingPanel.make(size: size)
+        hudHostingView = NSHostingView(
+            rootView: AnyView(HUDPlaceholderView(message: "Ready"))
+        )
+        hudHostingView.frame = NSRect(origin: .zero, size: size)
+        hud.contentView = hudHostingView
+        hud.onEscape = { [weak self] in self?.dismissHUD() }
+    }
 
     func start() {
         statusItemController = StatusItemController(
             onToggleEnabled: { [weak self] in self?.toggleEnabled() },
-            onClearLearning: { [weak self] in self?.showLearningCleared() },
             onRequestAccessibility: { [weak self] in self?.showPermissionGuide(.accessibility) },
             onRequestScreenRecording: { [weak self] in self?.showPermissionGuide(.screenRecording) },
             onQuit: { NSApp.terminate(nil) },
@@ -33,7 +55,7 @@ final class AppCoordinator {
             }
         )
 
-        // Keep first-run setup pointed at the exact permission pane.
+        // Point first-run setup at the exact permission pane.
         if !permissionService.isTrusted {
             permissionGuideController.present(panel: .accessibility)
         }
@@ -48,65 +70,55 @@ final class AppCoordinator {
 
     private func registerHotkey() {
         do {
-            try hotkeyService.registerDefaultHotkey { [weak self] in
-                self?.handleHotkey()
-            }
-        } catch {
-            capsuleController.show(
-                title: "Hotkey unavailable",
-                message: "Option + Space could not be registered."
+            // Push-to-talk: hold = listen, release = process.
+            try hotkeyService.registerDefaultHotkey(
+                onPress: { [weak self] in self?.startListening() },
+                onRelease: { [weak self] in self?.stopListening() }
             )
+        } catch {
+            NSLog("[CasprFlow] Hotkey registration failed: %@", String(describing: error))
         }
     }
 
     private func toggleEnabled() {
         isEnabled.toggle()
         statusItemController?.refresh()
-        if !isEnabled {
-            capsuleController.hide()
-        }
+        if !isEnabled { dismissHUD() }
     }
 
-    private func handleHotkey() {
-        guard isEnabled else { return }
-        NSLog("[CasprFlow] Hotkey fired")
+    /// Hotkey pressed: show the center-bottom HUD and (once wired) begin on-device
+    /// speech capture with the live sine-wave animation. See phase 1.
+    private func startListening() {
+        guard isEnabled, !isListening else { return }
+        isListening = true
+        setHUD(message: "Listening…")
+        hud.positionCenterBottom()
+        hud.orderFrontRegardless()
+    }
+
+    /// Hotkey released: stop capture, show the spinner while the transcript is routed
+    /// and dispatched. The skeleton just flashes the spinner and dismisses.
+    private func stopListening() {
+        guard isListening else { return }
+        isListening = false
+        setHUD(message: "Working…")
         Task { @MainActor [weak self] in
-            await self?.captureSelectionAndShowCapsule()
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            self?.dismissHUD()
         }
     }
 
-    private func captureSelectionAndShowCapsule() async {
-        let context = await selectionCaptureService.captureContext()
-        NSLog("[CasprFlow] Capture result: %@", String(describing: context.captureResult))
-        switch context.captureResult {
-        case .permissionRequired:
-            showPermissionGuide(.accessibility)
-            capsuleController.show(
-                title: "Accessibility needed",
-                message: "Use the menu helper to add CasprFlow, then press Option + Space again."
-            )
-        case .selected, .empty:
-            if !context.bundle.prompt.isEmpty {
-                capsuleController.showContext(context)
-            } else {
-                capsuleController.show(
-                    title: "Need more context",
-                    message: "Focus a reply field with visible message text, then press Option + Space."
-                )
-            }
-        }
+    private func setHUD(message: String) {
+        hudHostingView.rootView = AnyView(HUDPlaceholderView(message: message))
     }
 
-    private func showLearningCleared() {
-        capsuleController.show(
-            title: "Learning cleared",
-            message: "Nothing to clear yet."
-        )
+    private func dismissHUD() {
+        hud.orderOut(nil)
+        isListening = false
     }
 
     private func showPermissionGuide(_ panel: PermissionGuidePanel) {
         permissionGuideController.present(panel: panel)
         statusItemController?.refresh()
     }
-
 }

@@ -20,7 +20,6 @@ public struct StatusItemState: Equatable, Sendable {
 final class StatusItemController: NSObject {
     private let statusItem: NSStatusItem
     private let onToggleEnabled: () -> Void
-    private let onClearLearning: () -> Void
     private let onRequestAccessibility: () -> Void
     private let onRequestScreenRecording: () -> Void
     private let onQuit: () -> Void
@@ -28,7 +27,6 @@ final class StatusItemController: NSObject {
 
     init(
         onToggleEnabled: @escaping () -> Void,
-        onClearLearning: @escaping () -> Void,
         onRequestAccessibility: @escaping () -> Void,
         onRequestScreenRecording: @escaping () -> Void,
         onQuit: @escaping () -> Void,
@@ -36,7 +34,6 @@ final class StatusItemController: NSObject {
     ) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.onToggleEnabled = onToggleEnabled
-        self.onClearLearning = onClearLearning
         self.onRequestAccessibility = onRequestAccessibility
         self.onRequestScreenRecording = onRequestScreenRecording
         self.onQuit = onQuit
@@ -68,7 +65,7 @@ final class StatusItemController: NSObject {
         enabledItem.target = self
         menu.addItem(enabledItem)
 
-        let hotkeyItem = NSMenuItem(title: "Hotkey: Option + Space", action: nil, keyEquivalent: "")
+        let hotkeyItem = NSMenuItem(title: "Hotkey: \(HotkeyDescriptor.defaultHotkey.displayName)", action: nil, keyEquivalent: "")
         hotkeyItem.isEnabled = false
         menu.addItem(hotkeyItem)
 
@@ -92,16 +89,6 @@ final class StatusItemController: NSObject {
 
         menu.addItem(.separator())
 
-        let clearItem = NSMenuItem(
-            title: "Clear learning",
-            action: #selector(clearLearning),
-            keyEquivalent: ""
-        )
-        clearItem.target = self
-        menu.addItem(clearItem)
-
-        menu.addItem(.separator())
-
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
@@ -119,10 +106,6 @@ final class StatusItemController: NSObject {
 
     @objc private func toggleEnabled() {
         onToggleEnabled()
-    }
-
-    @objc private func clearLearning() {
-        onClearLearning()
     }
 
     @objc private func openAccessibility() {
