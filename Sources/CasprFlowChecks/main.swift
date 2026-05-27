@@ -104,6 +104,32 @@ let registryResult = await registry.dispatch(shellIntent)
 expect(registryResult.ok, "handler registry dispatch succeeds")
 expect(registryResult.message == "first", "handler registry uses first matching handler")
 
+// Phase 3 executors: pure builders/resolvers stay stable for generic handlers.
+let googleURL = BrowserSearchURLBuilder.googleSearchURL(query: "best restaurants in SF")
+expect(
+    googleURL?.absoluteString == "https://www.google.com/search?q=best%20restaurants%20in%20SF",
+    "browser search URL builder encodes query"
+)
+expect(
+    BrowserSearchURLBuilder.googleSearchURL(query: "   ") == nil,
+    "browser search URL builder rejects empty query"
+)
+expect(
+    AppNameResolver.normalizedName("  Figma App  ") == "figma",
+    "app resolver normalizes spoken app names"
+)
+expect(
+    AppNameResolver.bundleIdentifier(for: "google chrome") == "com.google.Chrome",
+    "app resolver maps common browser name"
+)
+expect(
+    AppNameResolver.candidateApplicationNames(for: "figma").contains("Figma.app"),
+    "app resolver includes .app candidate"
+)
+expect(ShellCommandPolicy.isAllowed("git status --short"), "shell policy allows safe git status")
+expect(!ShellCommandPolicy.isAllowed("rm -rf /"), "shell policy blocks destructive command")
+expect(!ShellCommandPolicy.isAllowed("echo ok; rm -rf /"), "shell policy blocks shell chaining")
+
 // LLM connector: config load + request body shape.
 let config = LLMConfig.load(environment: ["OPENAI_MODEL": "gpt-test", "OPENAI_REASONING_EFFORT": "medium"])
 expect(config.model == "gpt-test", "config reads OPENAI_MODEL")

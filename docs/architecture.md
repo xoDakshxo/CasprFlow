@@ -67,8 +67,8 @@ ActionResult → HUD dismisses / brief result toast
 | `Intent` | Value type: `kind` (enum) + `slots: [String: String]` + `confidence`. | **built** (phase 2) |
 | `IntentRouter` | Tier-0 deterministic now; Tier-1 LLM fallback later behind the same seam. | **built** (phase 2 deterministic; phase 7 LLM) |
 | `ActionHandler` / `HandlerRegistry` | Protocol + ordered registry; first match executes. | **built** (phase 2) |
-| Handlers | One per action class; programmatic execution. | **to build** (phase 3–6) |
-| Executors | `URLSchemeLauncher`, `AppleScriptRunner`, `ShellRunner`, `SwarmHost`. | **to build** (phase 3–4) |
+| Handlers | One per action class; programmatic execution. Generic URL/app/search/shell handlers are built; specialized handlers follow. | **built** (phase 3 generic; phase 4–6 specialized) |
+| Executors | `URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`, `ShellRunner`, `SwarmHost`. URL/app/script/shell executors are built; `SwarmHost` follows. | **built** (phase 3 core; phase 4 swarm) |
 | `LLMClient` | Text-only OpenAI Responses client + config + preconnect. | **kept** |
 | `FloatingPanel` | Borderless floating non-activating NSPanel shell (voice HUD + artifact window). | **kept** |
 | `HotkeyService` | Carbon global hotkey (Option+Space). | **kept** |

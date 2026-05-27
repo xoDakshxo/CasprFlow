@@ -40,9 +40,10 @@ This repo is in the phased dispatcher build:
 
 - The retired "knowledge fast replies" reply-capsule product has been stripped.
 - The native shell + connectors are kept and clean (see [`connectors.md`](connectors.md)).
-- Voice input and the deterministic intent router/handler registry are built.
-- Real executor primitives, action handlers, swarm, artifact window, and LLM fallback
-  remain sequenced in [`implementation/`](implementation/README.md).
+- Voice input, the deterministic intent router/handler registry, and the first generic
+  executor primitives/handlers are built.
+- Specialized handlers, swarm, artifact window, and LLM fallback remain sequenced in
+  [`implementation/`](implementation/README.md).
 
 ## How to run
 

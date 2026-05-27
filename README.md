@@ -25,8 +25,9 @@ executor primitives compose into thin handlers. Reference flows:
 ## Status
 
 The previous reply-capsule product was scrapped. The native shell + connectors are kept
-and building green. Voice input plus the deterministic intent router/handler registry
-are built; real executors and handlers continue in the remaining implementation phases.
+and building green. Voice input, the deterministic intent router/handler registry, and
+the first generic executor primitives/handlers are built; specialized handlers continue
+in the remaining implementation phases.
 
 ## Docs
 
