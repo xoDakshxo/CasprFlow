@@ -62,8 +62,9 @@ keys are listed in [`implementation/phase-1-voice-hud.md`](implementation/phase-
 - Phase 1: `VoiceHUDController`, `VoiceInputService`, transcript HUD view.
 - Phase 2: `Intent`, deterministic `IntentRouter`, `ActionHandler`, `HandlerRegistry`,
   and the route→dispatch loop.
+- Phase 3: `URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`, `ShellRunner`, plus
+  generic handlers for browser search, open URL, open app, and guarded shell commands.
 
-Still to be added: real action handlers, the executor primitives
-(`URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`, `ShellRunner`, `SwarmHost`,
-`ArtifactWindow`), and the phase-7 LLM router fallback. Each is specified in
+Still to be added: specialized action handlers, `SwarmHost`, `ArtifactWindow`, and the
+phase-7 LLM router fallback. Each is specified in
 [`implementation/`](implementation/README.md).

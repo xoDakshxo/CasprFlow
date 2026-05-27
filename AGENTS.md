@@ -63,6 +63,8 @@ shell + connectors are kept, and the phased dispatcher build is underway:
   transcript text and hands the final transcript into the dispatcher.
 - Phase 2 adds the deterministic router, intent model, handler protocol/registry, and
   route→dispatch loop with a logging stub until real handlers arrive in phase 3.
+- Phase 3 adds the universal URL/app/AppleScript/shell executors plus browser-search,
+  open-URL, open-app, and guarded shell handlers for first end-to-end dispatch.
 - Kept connectors: `HotkeyService`, `FloatingPanel` (HUD/artifact shell), `PasteService`,
   `CasprFlowLogo`/`CasprFlowLogoMark` (spinner), `LLMClient` (OpenAI text client), the
   full permission stack (Accessibility + Screen Recording, **including the

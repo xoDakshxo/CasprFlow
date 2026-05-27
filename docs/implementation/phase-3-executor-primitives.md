@@ -42,8 +42,9 @@ Register them in the `HandlerRegistry` (most-specific first, generic last).
 ## Safety
 
 `ShellCommandHandler` runs arbitrary commands — keep it behind clear intent and never
-run destructive commands silently. For the demos it is not required; gate it or keep it
-minimal until trust UX exists.
+run destructive commands silently. For now it is deliberately gated to a small
+read-only allowlist (`git status`, `ls`, `pwd`, `date`, `whoami`, `echo`, Swift version)
+and rejects shell chaining/redirection. Broaden this only when trust UX exists.
 
 ## Latency
 

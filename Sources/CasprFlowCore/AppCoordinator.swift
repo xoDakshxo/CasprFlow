@@ -4,14 +4,19 @@ import AppKit
 ///
 /// This is the post-pivot skeleton: it registers the global hotkey, owns the
 /// permission + status-item plumbing, and owns the prewarmed voice HUD. The
-/// phase-2 route→dispatch loop is wired in on top of this shell.
+/// route→dispatch loop is wired in on top of this shell.
 @MainActor
 final class AppCoordinator {
     private let hotkeyService = HotkeyService()
     private let permissionService = AccessibilityPermissionService()
     private let screenRecordingPermissionService = ScreenRecordingPermissionService()
     private let intentRouter: any IntentRouter = DeterministicRouter()
-    private let handlerRegistry = HandlerRegistry(handlers: [Phase2LoggingHandler()])
+    private let handlerRegistry = HandlerRegistry(handlers: [
+        BrowserSearchHandler(),
+        OpenURLHandler(),
+        OpenAppHandler(),
+        ShellCommandHandler()
+    ])
     private lazy var permissionGuideController = PermissionGuideController(
         accessibilityPermissionService: permissionService,
         screenRecordingPermissionService: screenRecordingPermissionService,
@@ -93,10 +98,12 @@ final class AppCoordinator {
     }
 
     private func routeAndDispatch(_ transcript: String) async -> ActionResult {
+        let submitTime = DispatchTime.now()
         let loggedTranscript = transcript.isEmpty ? "<empty>" : transcript
         NSLog("[CasprFlow] Voice transcript: %@", loggedTranscript)
 
         let intent = await intentRouter.route(transcript)
+        let routeDoneTime = DispatchTime.now()
         NSLog(
             "[CasprFlow] Routed intent: kind=%@ confidence=%.2f slots=%@",
             intent.kind.rawValue,
@@ -109,10 +116,17 @@ final class AppCoordinator {
         }
 
         let result = await handlerRegistry.dispatch(intent)
+        let dispatchDoneTime = DispatchTime.now()
         NSLog(
             "[CasprFlow] Dispatch result: ok=%@ message=%@",
             result.ok ? "true" : "false",
             result.message ?? ""
+        )
+        NSLog(
+            "[CasprFlow] Dispatch latency: route=%.2fms dispatch=%.2fms total=%.2fms",
+            Self.milliseconds(from: submitTime, to: routeDoneTime),
+            Self.milliseconds(from: routeDoneTime, to: dispatchDoneTime),
+            Self.milliseconds(from: submitTime, to: dispatchDoneTime)
         )
         return result
     }
@@ -121,14 +135,8 @@ final class AppCoordinator {
         permissionGuideController.present(panel: panel)
         statusItemController?.refresh()
     }
-}
 
-private struct Phase2LoggingHandler: ActionHandler {
-    func match(_ intent: Intent) -> Bool {
-        intent.kind != .unknown
-    }
-
-    func execute(_ intent: Intent) async throws -> ActionResult {
-        ActionResult(ok: true, message: "Routed: \(intent.kind.rawValue)")
+    private static func milliseconds(from start: DispatchTime, to end: DispatchTime) -> Double {
+        Double(end.uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
     }
 }
