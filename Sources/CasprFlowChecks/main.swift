@@ -32,6 +32,22 @@ expect(SelectionTextNormalizer.clean("  hello  ") == "hello", "trimmed selected 
 expect(VoiceLevelMeter.normalizedRMS(-1) == 0, "voice level rejects invalid low RMS")
 expect(VoiceLevelMeter.normalizedRMS(0.012) == 0, "voice level noise floor")
 expect(VoiceLevelMeter.normalizedRMS(0.22) == 1, "voice level speech ceiling")
+expect(
+    VoiceCaptureFinalization.timeoutNanoseconds(hasTranscript: true, heardSpeech: false) == 800_000_000,
+    "voice finalization uses short timeout once transcript exists"
+)
+expect(
+    VoiceCaptureFinalization.timeoutNanoseconds(hasTranscript: false, heardSpeech: true) == 1_800_000_000,
+    "voice finalization waits for short speech without transcript"
+)
+expect(
+    VoiceCaptureFinalization.timeoutNanoseconds(hasTranscript: false, heardSpeech: false) == 350_000_000,
+    "voice finalization exits quickly for silence"
+)
+expect(
+    !VoiceCaptureFinalization.shouldFinishOnRecognitionError(hasTranscript: false, heardSpeech: true),
+    "voice finalization ignores early empty error after heard speech"
+)
 
 // LLM connector: config load + request body shape.
 let config = LLMConfig.load(environment: ["OPENAI_MODEL": "gpt-test", "OPENAI_REASONING_EFFORT": "medium"])

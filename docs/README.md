@@ -6,10 +6,11 @@ executes programmatic actions fast**.
 
 You **hold** a global hotkey (**Option + Space**) and speak. A small Wispr-style
 transcript pill appears center-bottom and updates while you talk; on release it
-transitions into the CasprFlow spinner while an intent router classifies the command and a handler fires
-immediately using **programmatic methods** (URL schemes, AppleScript, CLI, deep links)
-— not vision-based computer use. There is **no text box**; voice is the input. Sub-second
-dispatch on the common path.
+transitions into the CasprFlow spinner while keeping late short-utterance text visible
+briefly. An intent router classifies the command and a handler fires immediately using
+**programmatic methods** (URL schemes, AppleScript, CLI, deep links) — not vision-based
+computer use. There is **no text box**; voice is the input. Sub-second dispatch on the
+common path.
 
 It is a **universal dispatcher**, not a launcher for a fixed set of apps. A small set of
 app-agnostic executor primitives (open any URL/app, run any AppleScript/CLI, paste into

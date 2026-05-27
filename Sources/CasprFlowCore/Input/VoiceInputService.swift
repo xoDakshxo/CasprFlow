@@ -67,6 +67,33 @@ public enum VoiceLevelMeter {
     }
 }
 
+public enum VoiceCaptureFinalization {
+    public static let speechLevelThreshold: Float = 0.08
+    public static let transcriptReadyTimeoutNanoseconds: UInt64 = 800_000_000
+    public static let speechDetectedTimeoutNanoseconds: UInt64 = 1_800_000_000
+    public static let silenceTimeoutNanoseconds: UInt64 = 350_000_000
+
+    public static func heardSpeech(fromLevel level: Float) -> Bool {
+        level >= speechLevelThreshold
+    }
+
+    public static func timeoutNanoseconds(hasTranscript: Bool, heardSpeech: Bool) -> UInt64 {
+        if hasTranscript {
+            return transcriptReadyTimeoutNanoseconds
+        }
+
+        if heardSpeech {
+            return speechDetectedTimeoutNanoseconds
+        }
+
+        return silenceTimeoutNanoseconds
+    }
+
+    public static func shouldFinishOnRecognitionError(hasTranscript: Bool, heardSpeech: Bool) -> Bool {
+        hasTranscript || !heardSpeech
+    }
+}
+
 @MainActor
 public final class VoiceInputService {
     private let audioEngine = AVAudioEngine()
@@ -77,6 +104,7 @@ public final class VoiceInputService {
     private var latestTranscript = ""
     private var stopContinuation: CheckedContinuation<String, Never>?
     private var isCapturing = false
+    private var heardSpeech = false
 
     public init(locale: Locale = .current) {
         speechRecognizer = SFSpeechRecognizer(locale: locale)
@@ -139,6 +167,7 @@ public final class VoiceInputService {
         recognitionTask = nil
         recognitionRequest = nil
         latestTranscript = ""
+        heardSpeech = false
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
@@ -158,14 +187,17 @@ public final class VoiceInputService {
                     }
                 },
                 onError: { [weak self] in
-                    self?.finishStopIfNeeded()
+                    self?.finishAfterRecognitionError()
                 }
             )
         )
 
         let tap = Self.makeAudioTap(
             request: request,
-            onLevel: { level in
+            onLevel: { [weak self] level in
+                if VoiceCaptureFinalization.heardSpeech(fromLevel: level) {
+                    self?.heardSpeech = true
+                }
                 onLevel(level)
             }
         )
@@ -199,8 +231,13 @@ public final class VoiceInputService {
 
         return await withCheckedContinuation { continuation in
             stopContinuation = continuation
+            let timeout = VoiceCaptureFinalization.timeoutNanoseconds(
+                hasTranscript: SelectionTextNormalizer.clean(latestTranscript) != nil,
+                heardSpeech: heardSpeech
+            )
+
             Task { @MainActor [weak self] in
-                try? await Task.sleep(nanoseconds: 800_000_000)
+                try? await Task.sleep(nanoseconds: timeout)
                 self?.finishStopIfNeeded()
             }
         }
@@ -303,9 +340,25 @@ public final class VoiceInputService {
     }
 
     private func finishStopIfNeeded() {
+        finishStopIfNeeded(allowEmpty: true)
+    }
+
+    private func finishAfterRecognitionError() {
+        let hasTranscript = SelectionTextNormalizer.clean(latestTranscript) != nil
+        let allowEmpty = VoiceCaptureFinalization.shouldFinishOnRecognitionError(
+            hasTranscript: hasTranscript,
+            heardSpeech: heardSpeech
+        )
+
+        finishStopIfNeeded(allowEmpty: allowEmpty)
+    }
+
+    private func finishStopIfNeeded(allowEmpty: Bool) {
         guard let continuation = stopContinuation else { return }
 
         let transcript = SelectionTextNormalizer.clean(latestTranscript) ?? ""
+        guard allowEmpty || !transcript.isEmpty else { return }
+
         stopContinuation = nil
         recognitionTask?.cancel()
         recognitionTask = nil

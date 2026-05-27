@@ -40,7 +40,7 @@ Hold Option+Space (push-to-talk)
 VoiceHUDController ── prewarmed FloatingPanel, center-bottom, small
    │  listening: live partial transcript pill     │
    │  VoiceInputService: on-device SFSpeechRecognizer, streaming partials
-   ▼  (on release → final transcript)             ▼ processing: CasprFlow spinner
+   ▼  (on release → final transcript)             ▼ processing: spinner + late transcript
 IntentRouter
    ├─ Tier 0  DeterministicRouter   regex/keyword → Intent      (~0 ms)
    └─ Tier 1  LLMRouter (nano)       strict-JSON classify → Intent (fallback only)
@@ -83,8 +83,8 @@ See [`connectors.md`](connectors.md) for exact file paths and usage of the kept 
 1. Hotkey **pressed** → `VoiceHUDController` shows the prewarmed HUD (no allocation) and
    starts on-device capture; partial transcript text updates in the pill.
 2. User speaks while holding; partials stream locally.
-3. Hotkey **released** → capture stops, the HUD transitions to the spinner, the final
-   transcript goes to `IntentRouter`.
+3. Hotkey **released** → capture stops, the HUD transitions to the spinner, late/final
+   transcript text remains visible briefly, and the final transcript goes to `IntentRouter`.
 4. Tier-0 deterministic match returns an `Intent` synchronously. Only on a miss does
    Tier-1 hit the network.
 5. `HandlerRegistry` picks the first handler whose `match(Intent)` is true and calls
