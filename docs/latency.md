@@ -8,7 +8,7 @@ polish item. If a feature can't hit its budget, change the approach, not the bud
 | Stage | Target | Mechanism |
 |---|---|---|
 | hotkey → bar visible | < 16 ms | panel allocated once at launch; invoke = `orderFrontRegardless` only |
-| voice transcript ready | ~0 network | on-device `SFSpeechRecognizer`; partials arrive as you speak |
+| voice transcript ready | ~0 network | on-device `SFSpeechRecognizer`; partials arrive as you speak, with a short local grace window for quick releases |
 | Tier-0 route | < 2 ms | pure-Swift regex/keyword; no allocation-heavy work |
 | dispatch (URL / AppleScript / deep link) | < 100 ms | `NSWorkspace.open`, `osascript`, deep links |
 | Tier-1 route (fallback only) | ~300–600 ms | warm TLS + tiny structured output + low reasoning |

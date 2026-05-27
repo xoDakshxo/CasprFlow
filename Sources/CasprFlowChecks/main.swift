@@ -32,6 +32,77 @@ expect(SelectionTextNormalizer.clean("  hello  ") == "hello", "trimmed selected 
 expect(VoiceLevelMeter.normalizedRMS(-1) == 0, "voice level rejects invalid low RMS")
 expect(VoiceLevelMeter.normalizedRMS(0.012) == 0, "voice level noise floor")
 expect(VoiceLevelMeter.normalizedRMS(0.22) == 1, "voice level speech ceiling")
+expect(
+    VoiceCaptureFinalization.timeoutNanoseconds(hasTranscript: true, heardSpeech: false) == 800_000_000,
+    "voice finalization uses short timeout once transcript exists"
+)
+expect(
+    VoiceCaptureFinalization.timeoutNanoseconds(hasTranscript: false, heardSpeech: true) == 1_800_000_000,
+    "voice finalization waits for short speech without transcript"
+)
+expect(
+    VoiceCaptureFinalization.timeoutNanoseconds(hasTranscript: false, heardSpeech: false) == 350_000_000,
+    "voice finalization exits quickly for silence"
+)
+expect(
+    !VoiceCaptureFinalization.shouldFinishOnRecognitionError(hasTranscript: false, heardSpeech: true),
+    "voice finalization ignores early empty error after heard speech"
+)
+
+// Phase 2 router: deterministic seed rules map to stable intent kinds and slots.
+let router = DeterministicRouter()
+
+let searchIntent = await router.route("Get me the best restaurants from Google")
+expect(searchIntent.kind == .browserSearch, "search routes to browserSearch")
+expect(searchIntent.slots["query"] == "the best restaurants", "search captures query")
+expect(searchIntent.slots["engine"] == "google", "search captures engine")
+expect(searchIntent.confidence == 1, "deterministic search confidence")
+
+let swarmIntent = await router.route("Spin up five agents and refactor the UI docs")
+expect(swarmIntent.kind == .agentSwarm, "agent phrase routes to agentSwarm")
+expect(swarmIntent.slots["count"] == "5", "agent phrase normalizes spoken count")
+expect(swarmIntent.slots["task"] == "the ui docs", "agent phrase captures task")
+
+let replyIntent = await router.route("Reply to Prachi that we'll ship Friday")
+expect(replyIntent.kind == .slackReply, "reply phrase routes to slackReply")
+expect(replyIntent.slots["recipient"] == "prachi", "reply captures recipient")
+expect(replyIntent.slots["message"] == "we'll ship friday", "reply captures message")
+
+let openAppIntent = await router.route("Open Linear")
+expect(openAppIntent.kind == .openApp, "open app phrase routes to openApp")
+expect(openAppIntent.slots["app"] == "linear", "open app captures app")
+
+let openURLIntent = await router.route("Go to example.com")
+expect(openURLIntent.kind == .openURL, "domain phrase routes to openURL")
+expect(openURLIntent.slots["url"] == "https://example.com", "domain phrase normalizes URL")
+
+let shellIntent = await router.route("Run git status")
+expect(shellIntent.kind == .shell, "run phrase routes to shell")
+expect(shellIntent.slots["command"] == "git status", "run phrase captures command")
+
+let unknownIntent = await router.route("Please do the thing")
+expect(unknownIntent.kind == .unknown, "unmatched phrase routes to unknown")
+expect(unknownIntent.confidence == 0, "unknown confidence")
+
+private struct StubHandler: ActionHandler {
+    let message: String
+
+    func match(_ intent: Intent) -> Bool {
+        intent.kind == .shell
+    }
+
+    func execute(_ intent: Intent) async throws -> ActionResult {
+        ActionResult(ok: true, message: message)
+    }
+}
+
+let registry = HandlerRegistry(handlers: [
+    StubHandler(message: "first"),
+    StubHandler(message: "second")
+])
+let registryResult = await registry.dispatch(shellIntent)
+expect(registryResult.ok, "handler registry dispatch succeeds")
+expect(registryResult.message == "first", "handler registry uses first matching handler")
 
 // LLM connector: config load + request body shape.
 let config = LLMConfig.load(environment: ["OPENAI_MODEL": "gpt-test", "OPENAI_REASONING_EFFORT": "medium"])

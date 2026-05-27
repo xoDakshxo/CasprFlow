@@ -16,8 +16,10 @@ plumbing. Keep app-specific knowledge at the edge.
 There is **no text field**. You press and **hold** Option+Space; a small Wispr-style
 transcript pill appears center-bottom of the screen and updates with your words; you
 **release**; the pill transitions into the existing **CasprFlow spinner** while the
-transcript is routed and dispatched. Push-to-talk is already wired in `HotkeyService`
-(press/release) and `AppCoordinator` (`startListening`/`stopListening`).
+transcript is routed and dispatched. If the utterance is short and final text arrives
+just after release, the pill keeps that text visible next to the spinner briefly.
+Push-to-talk is already wired in `HotkeyService` (press/release) and `AppCoordinator`
+(`startListening`/`stopListening`).
 
 ## Phases
 

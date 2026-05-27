@@ -13,8 +13,8 @@ transcript string handed to the dispatcher (phase 2).
 - Tiny, unobtrusive HUD pinned center-bottom (a capsule ~320×56). Not a window you
   interact with — a status indicator.
 - Listening = live partial transcript text inside the pill. Processing = the CasprFlow
-  spinner (`CasprFlowLogoMark`). The transition between them should feel smooth, not a
-  hard swap.
+  spinner (`CasprFlowLogoMark`); if a short utterance finalizes just after release, keep
+  the transcript visible next to the spinner briefly instead of dropping it.
 - Zero friction: press, talk, release. No confirm step.
 
 ## Build
@@ -73,9 +73,10 @@ into the existing permission guide if convenient (see the kept `Permissions/` st
 ## Latency
 
 On-device recognition only — no network. Partial results stream during the hold, so on
-release the final transcript is essentially ready. Keep the audio engine setup off the
-hotkey path if possible (warm it lazily but quickly). Show the transcript HUD instantly
-on press; show the spinner instantly on release.
+release the final transcript is usually ready. Short utterances can arrive just after
+release; wait a brief, speech-sensitive grace period before returning an empty transcript.
+Keep the audio engine setup off the hotkey path if possible (warm it lazily but quickly).
+Show the transcript HUD instantly on press; show the spinner instantly on release.
 
 ## Acceptance
 

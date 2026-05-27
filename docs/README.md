@@ -6,10 +6,11 @@ executes programmatic actions fast**.
 
 You **hold** a global hotkey (**Option + Space**) and speak. A small Wispr-style
 transcript pill appears center-bottom and updates while you talk; on release it
-transitions into the CasprFlow spinner while an intent router classifies the command and a handler fires
-immediately using **programmatic methods** (URL schemes, AppleScript, CLI, deep links)
-— not vision-based computer use. There is **no text box**; voice is the input. Sub-second
-dispatch on the common path.
+transitions into the CasprFlow spinner while keeping late short-utterance text visible
+briefly. An intent router classifies the command and a handler fires immediately using
+**programmatic methods** (URL schemes, AppleScript, CLI, deep links) — not vision-based
+computer use. There is **no text box**; voice is the input. Sub-second dispatch on the
+common path.
 
 It is a **universal dispatcher**, not a launcher for a fixed set of apps. A small set of
 app-agnostic executor primitives (open any URL/app, run any AppleScript/CLI, paste into
@@ -35,13 +36,13 @@ allocation. See [`latency.md`](latency.md) for the contract and the tactics.
 
 ## Status
 
-This repo is at the **post-pivot skeleton** stage:
+This repo is in the phased dispatcher build:
 
 - The retired "knowledge fast replies" reply-capsule product has been stripped.
 - The native shell + connectors are kept and clean (see [`connectors.md`](connectors.md)).
-- The dispatcher (command bar, intent router, action handlers, voice, swarm) is
-  **not built yet** — it is specified phase-by-phase in
-  [`implementation/`](implementation/README.md) for a Codex-driven build.
+- Voice input and the deterministic intent router/handler registry are built.
+- Real executor primitives, action handlers, swarm, artifact window, and LLM fallback
+  remain sequenced in [`implementation/`](implementation/README.md).
 
 ## How to run
 

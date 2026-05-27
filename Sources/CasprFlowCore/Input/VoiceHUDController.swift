@@ -6,14 +6,14 @@ public final class VoiceHUDController {
     private let panel: FloatingPanel
     private let model = VoiceHUDModel()
     private let voiceInputService: VoiceInputService
-    private let onTranscript: (String) -> Void
+    private let onTranscript: @MainActor (String) async -> ActionResult
 
     private var isHolding = false
     private var captureTask: Task<Void, Never>?
     private var stopTask: Task<Void, Never>?
     private var errorDismissTask: Task<Void, Never>?
 
-    public init(onTranscript: @escaping (String) -> Void) {
+    public init(onTranscript: @escaping @MainActor (String) async -> ActionResult) {
         self.onTranscript = onTranscript
         self.voiceInputService = VoiceInputService()
 
@@ -44,29 +44,30 @@ public final class VoiceHUDController {
         panel.orderFrontRegardless()
 
         captureTask?.cancel()
-        captureTask = Task { @MainActor [weak self] in
-            guard let self else { return }
+        do {
+            try startVoiceCapture()
+        } catch let error as VoiceInputError
+            where error == .microphonePermissionNeeded || error == .speechPermissionNeeded {
+            captureTask = Task { @MainActor [weak self] in
+                guard let self else { return }
 
-            do {
-                try await voiceInputService.requestPermissionsIfNeeded()
-                guard isHolding else { return }
+                do {
+                    try await voiceInputService.requestPermissionsIfNeeded()
+                    guard isHolding else { return }
 
-                try voiceInputService.start(
-                    onPartial: { [weak self] partial in
-                        guard let self, self.isHolding else { return }
-                        self.model.partialTranscript = partial
-                    },
-                    onLevel: { _ in
-                        // Level is still collected for future UI, but the HUD now shows text.
-                    }
-                )
-            } catch {
-                guard isHolding, !Task.isCancelled else { return }
+                    try startVoiceCapture()
+                } catch {
+                    guard isHolding, !Task.isCancelled else { return }
 
-                self.isHolding = false
-                self.voiceInputService.cancel()
-                self.fail(Self.message(for: error))
+                    self.isHolding = false
+                    self.voiceInputService.cancel()
+                    self.fail(Self.message(for: error))
+                }
             }
+        } catch {
+            isHolding = false
+            voiceInputService.cancel()
+            fail(Self.message(for: error))
         }
     }
 
@@ -87,9 +88,25 @@ public final class VoiceHUDController {
 
             let transcript = await voiceInputService.stop()
             guard !Task.isCancelled else { return }
-            onTranscript(transcript)
+            if !transcript.isEmpty {
+                model.partialTranscript = transcript
+            }
 
-            try? await Task.sleep(nanoseconds: 220_000_000)
+            let result = await onTranscript(transcript)
+            guard !Task.isCancelled else { return }
+            guard result.ok else {
+                self.fail(result.message ?? "Didn't catch that.")
+                return
+            }
+
+            if let message = result.message {
+                setState(.result(message: message))
+            }
+
+            let dismissDelay: UInt64 = result.message == nil
+                ? (transcript.isEmpty ? 220_000_000 : 650_000_000)
+                : 900_000_000
+            try? await Task.sleep(nanoseconds: dismissDelay)
             guard !Task.isCancelled else { return }
             self.dismiss()
         }
@@ -124,6 +141,27 @@ public final class VoiceHUDController {
 
     private func setState(_ state: VoiceHUDState) {
         model.state = state
+    }
+
+    private func startVoiceCapture() throws {
+        try voiceInputService.start(
+            onPartial: { [weak self] partial in
+                guard let self, self.acceptsTranscriptUpdates else { return }
+                self.model.partialTranscript = partial
+            },
+            onLevel: { _ in
+                // Level is still collected for future UI, but the HUD now shows text.
+            }
+        )
+    }
+
+    private var acceptsTranscriptUpdates: Bool {
+        switch model.state {
+        case .listening, .processing:
+            return true
+        case .idle, .result, .error:
+            return false
+        }
     }
 
     private static func message(for error: Error) -> String {

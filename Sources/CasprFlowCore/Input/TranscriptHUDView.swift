@@ -4,6 +4,7 @@ public enum VoiceHUDState: Equatable, Sendable {
     case idle
     case listening
     case processing
+    case result(message: String)
     case error(message: String)
 
     var isProcessing: Bool {
@@ -15,6 +16,13 @@ public enum VoiceHUDState: Equatable, Sendable {
 
     var errorMessage: String? {
         if case .error(let message) = self {
+            return message
+        }
+        return nil
+    }
+
+    var resultMessage: String? {
+        if case .result(let message) = self {
             return message
         }
         return nil
@@ -40,15 +48,12 @@ struct VoiceHUDView: View {
                         .frame(maxWidth: 214, alignment: .leading)
                 }
                 .padding(.horizontal, 14)
+            } else if let resultMessage = model.state.resultMessage {
+                resultReadout(resultMessage)
+            } else if model.state.isProcessing {
+                processingReadout
             } else {
                 transcriptReadout
-                    .opacity(model.state.isProcessing ? 0 : 1)
-                    .scaleEffect(model.state.isProcessing ? 0.96 : 1)
-                    .blur(radius: model.state.isProcessing ? 3 : 0)
-
-                CasprFlowLoadingLogoMark(size: 22)
-                    .opacity(model.state.isProcessing ? 1 : 0)
-                    .scaleEffect(model.state.isProcessing ? 1 : 0.48)
             }
         }
         .frame(width: 320, height: 56)
@@ -86,6 +91,41 @@ struct VoiceHUDView: View {
         .padding(.horizontal, 16)
     }
 
+    private var processingReadout: some View {
+        let hasTranscript = model.hasTranscript
+
+        return HStack(spacing: 8) {
+            CasprFlowLoadingLogoMark(size: hasTranscript ? 16 : 22)
+
+            if hasTranscript {
+                Text(readoutText)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.72)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+        }
+        .padding(.horizontal, hasTranscript ? 16 : 0)
+    }
+
+    private func resultReadout(_ message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.green)
+
+            Text(message)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.76)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: 230, alignment: .leading)
+        }
+        .padding(.horizontal, 14)
+    }
+
     private var readoutText: String {
         if let cleaned = SelectionTextNormalizer.clean(model.partialTranscript) {
             return cleaned
@@ -108,5 +148,9 @@ final class VoiceHUDModel: ObservableObject {
             return true
         }
         return false
+    }
+
+    var hasTranscript: Bool {
+        SelectionTextNormalizer.clean(partialTranscript) != nil
     }
 }
