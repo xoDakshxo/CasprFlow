@@ -124,17 +124,21 @@ public final class VoiceInputService {
             throw VoiceInputError.recognizerUnavailable
         }
 
+        guard AVCaptureDevice.default(for: .audio) != nil else {
+            throw VoiceInputError.audioInputUnavailable
+        }
+
         let inputNode = audioEngine.inputNode
         let inputFormat = inputNode.outputFormat(forBus: 0)
         guard inputFormat.channelCount > 0, inputFormat.sampleRate > 0 else {
             throw VoiceInputError.audioInputUnavailable
         }
 
+        finishStopIfNeeded()
         recognitionTask?.cancel()
         recognitionTask = nil
         recognitionRequest = nil
         latestTranscript = ""
-        stopContinuation = nil
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
@@ -174,7 +178,7 @@ public final class VoiceInputService {
             try audioEngine.start()
             isCapturing = true
         } catch {
-            inputNode.removeTap(onBus: 0)
+            removeInputTapIfAvailable()
             request.endAudio()
             recognitionTask?.cancel()
             recognitionTask = nil
@@ -189,7 +193,7 @@ public final class VoiceInputService {
         }
 
         isCapturing = false
-        audioEngine.inputNode.removeTap(onBus: 0)
+        removeInputTapIfAvailable()
         audioEngine.stop()
         recognitionRequest?.endAudio()
 
@@ -204,7 +208,7 @@ public final class VoiceInputService {
 
     public func cancel() {
         isCapturing = false
-        audioEngine.inputNode.removeTap(onBus: 0)
+        removeInputTapIfAvailable()
         audioEngine.stop()
         recognitionRequest?.endAudio()
         finishStopIfNeeded()
@@ -307,5 +311,11 @@ public final class VoiceInputService {
         recognitionTask = nil
         recognitionRequest = nil
         continuation.resume(returning: transcript)
+    }
+
+    private func removeInputTapIfAvailable() {
+        guard AVCaptureDevice.default(for: .audio) != nil else { return }
+
+        audioEngine.inputNode.removeTap(onBus: 0)
     }
 }

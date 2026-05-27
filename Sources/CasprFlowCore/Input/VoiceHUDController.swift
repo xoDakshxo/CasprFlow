@@ -61,6 +61,8 @@ public final class VoiceHUDController {
                     }
                 )
             } catch {
+                guard isHolding, !Task.isCancelled else { return }
+
                 self.isHolding = false
                 self.voiceInputService.cancel()
                 self.fail(Self.message(for: error))
