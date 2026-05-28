@@ -64,7 +64,13 @@ keys are listed in [`implementation/phase-1-voice-hud.md`](implementation/phase-
   and the route→dispatch loop.
 - Phase 3: `URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`, `ShellRunner`, plus
   generic handlers for browser search, open URL, open app, and guarded shell commands.
+- Phase 4: `SwarmHost` + default `GhosttyHost` (`TmuxHost`/`WarpHost` kept as
+  alternates), `ProjectResolver`, `ProjectAliasStore`, `ProjectClarificationService`,
+  and `AgentSwarmHandler` for short spoken swarm commands that expand into scoped
+  per-pane CLI prompts or open plain Codex panes.
+- Phase 7: `LLMRouter` and `TieredIntentRouter` for strict-JSON OpenAI fallback only
+  when the deterministic router returns `.unknown`; `LLMClient.preconnect()` runs at app
+  launch.
 
-Still to be added: specialized action handlers, `SwarmHost`, `ArtifactWindow`, and the
-phase-7 LLM router fallback. Each is specified in
+Still to be added: Slack/paste reply and `ArtifactWindow`. Each is specified in
 [`implementation/`](implementation/README.md).

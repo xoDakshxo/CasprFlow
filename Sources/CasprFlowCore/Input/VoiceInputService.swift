@@ -89,14 +89,53 @@ public enum VoiceCaptureFinalization {
         return silenceTimeoutNanoseconds
     }
 
+    public static func timeoutNanoseconds(transcript: String?, heardSpeech: Bool) -> UInt64 {
+        guard let cleanedTranscript = SelectionTextNormalizer.clean(transcript) else {
+            return timeoutNanoseconds(hasTranscript: false, heardSpeech: heardSpeech)
+        }
+
+        let wordCount = cleanedTranscript.split(whereSeparator: { $0.isWhitespace }).count
+        if wordCount <= 1, heardSpeech {
+            return speechDetectedTimeoutNanoseconds
+        }
+
+        return transcriptReadyTimeoutNanoseconds
+    }
+
     public static func shouldFinishOnRecognitionError(hasTranscript: Bool, heardSpeech: Bool) -> Bool {
         hasTranscript || !heardSpeech
+    }
+}
+
+public struct VoiceRecognitionConfiguration: Equatable, Sendable {
+    public let localeIdentifier: String
+    public let contextualStrings: [String]
+
+    public init(
+        localeIdentifier: String = "en_US",
+        contextualStrings: [String] = Self.defaultContextualStrings
+    ) {
+        self.localeIdentifier = localeIdentifier
+        self.contextualStrings = contextualStrings
+    }
+
+    public static let defaultContextualStrings: [String] = []
+
+    public static func normalizedContextualStrings(_ strings: [String]) -> [String] {
+        var seen = Set<String>()
+        return strings.compactMap { value in
+            guard let cleaned = SelectionTextNormalizer.clean(value) else { return nil }
+            let key = DeterministicRouter.normalize(cleaned)
+            guard seen.insert(key).inserted else { return nil }
+            return cleaned
+        }
     }
 }
 
 @MainActor
 public final class VoiceInputService {
     private let audioEngine = AVAudioEngine()
+    private let configuration: VoiceRecognitionConfiguration
     private let speechRecognizer: SFSpeechRecognizer?
 
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
@@ -106,8 +145,9 @@ public final class VoiceInputService {
     private var isCapturing = false
     private var heardSpeech = false
 
-    public init(locale: Locale = .current) {
-        speechRecognizer = SFSpeechRecognizer(locale: locale)
+    public init(configuration: VoiceRecognitionConfiguration = VoiceRecognitionConfiguration()) {
+        self.configuration = configuration
+        speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: configuration.localeIdentifier))
     }
 
     public func requestPermissionsIfNeeded() async throws {
@@ -172,6 +212,10 @@ public final class VoiceInputService {
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         request.requiresOnDeviceRecognition = true
+        request.taskHint = .dictation
+        request.contextualStrings = VoiceRecognitionConfiguration.normalizedContextualStrings(
+            configuration.contextualStrings
+        )
         recognitionRequest = request
 
         recognitionTask = speechRecognizer.recognitionTask(
@@ -232,7 +276,7 @@ public final class VoiceInputService {
         return await withCheckedContinuation { continuation in
             stopContinuation = continuation
             let timeout = VoiceCaptureFinalization.timeoutNanoseconds(
-                hasTranscript: SelectionTextNormalizer.clean(latestTranscript) != nil,
+                transcript: latestTranscript,
                 heardSpeech: heardSpeech
             )
 

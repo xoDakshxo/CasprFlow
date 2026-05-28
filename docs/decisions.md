@@ -42,18 +42,24 @@ in later behind the same `IntentRouter` seam if Tier-1 latency matters.
 ## D5 — Input: voice only, on-device STT
 
 Push-to-talk voice via Apple `SFSpeechRecognizer` with `requiresOnDeviceRecognition =
-true`, streaming partial results into the HUD. There is no text box. On-device keeps
-the voice path off the network.
+true`, streaming partial results into the HUD. There is no command text box; only rare
+project/path ambiguity can open a native clarification prompt that is remembered.
+On-device keeps the voice path off the network. Higher-quality STT must use a
+persistent/in-process local engine; per-utterance CLI model startup is too slow for the
+push-to-talk hot path.
 
-## D6 — Agent swarm via a swappable `SwarmHost` (Warp is one impl)
+## D6 — Agent swarm via a swappable `SwarmHost` (Ghostty default)
 
 The agent-swarm handler talks to a `SwarmHost` protocol; the terminal is an
-implementation detail. A **Warp** host (launch-config YAML + `warp://launch/<name>`)
-is a convenient first impl since Warp is installed and matches the "5 panes" demo,
-but **tmux** (bundleable, headless, deterministic) and iTerm hosts drop in behind the
-same protocol without touching the handler. Don't let any single terminal leak into
-the core. `claude` (`~/.local/bin`) and `codex` (`/opt/homebrew/bin`) are installed;
-`tmux` is not (yet).
+implementation detail. **Ghostty** is the default host because it provides native
+macOS panes with scriptable window/tab/terminal control and avoids the nested tmux UI.
+`TmuxHost` and `WarpHost` remain alternate implementations, and iTerm can drop in behind
+the same protocol without touching the handler. The handler expands short phrases
+through project resolution and task slicing before it reaches the host, so the terminal
+receives complete per-pane prompts. Codex is the default agent tool; Claude remains an
+explicit slot option. Don't let any single terminal leak into the core. `claude`
+(`~/.local/bin`), `codex` (`/opt/homebrew/bin`), and `tmux` (`/opt/homebrew/bin`) are
+installed; Ghostty is required for the default host.
 
 ## D7 — Floating artifact window is a first-class primitive
 
@@ -61,7 +67,7 @@ The "get this doc ready for Prachi" flow (skill-loaded SQL agent → stream a qu
 a floating always-on-top artifact window → user clicks Run → paste into ClickHouse →
 confirm) is **in the design** as a reference use case. Its building block — a floating
 always-on-top **artifact window** that streams model output and exposes actions
-(Run/Copy/Dismiss) — is a reusable executor primitive, built on the `CommandBarPanel`
+(Run/Copy/Dismiss) — is a reusable executor primitive, built on the `FloatingPanel`
 shell. Implementation is sequenced after the simpler handlers, but the architecture
 must not design it out.
 

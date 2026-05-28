@@ -8,26 +8,27 @@ hold Option + Space  ->  speak  ->  release  ->  intent router  ->  programmatic
 
 Raycast + Wispr Flow, but instead of just launching apps it **dispatches to agents and
 executes programmatic actions fast** (URL schemes, AppleScript, deep links, CLI) — never
-vision-based computer use. There is **no text box**: a small Wispr-style transcript pill
-appears center-bottom while you talk, then transitions into the CasprFlow spinner while
-late short-utterance text can still surface. The command is then classified and
-dispatched. Sub-second on the common path.
+vision-based computer use. There is **no command text box**: a small Wispr-style
+transcript pill appears center-bottom while you talk, then transitions into the CasprFlow
+spinner while late short-utterance text can still surface. Rare project/path ambiguity
+can open a one-off native clarification prompt that is remembered. The command is then
+classified and dispatched. Sub-second on the common path.
 
 It's a **universal dispatcher**, not a launcher for a fixed set of apps. App-agnostic
 executor primitives compose into thin handlers. Reference flows:
 
 - "Get me the best restaurants from Google" → browser opens with results, instantly.
-- "Spin up 5 agents and refactor the UI docs" → a terminal opens with 5 headless
-  Claude Code / Codex panes.
+- "Spin up 3 agents on casprflow for UI docs, tests, and cleanup" → Ghostty opens
+  with 3 native Codex panes, each with an expanded scoped prompt.
 - "Get this doc ready for Prachi" → a SQL agent streams a query into a floating
   artifact window; click Run; it executes against ClickHouse.
 
 ## Status
 
 The previous reply-capsule product was scrapped. The native shell + connectors are kept
-and building green. Voice input, the deterministic intent router/handler registry, and
-the first generic executor primitives/handlers are built; specialized handlers continue
-in the remaining implementation phases.
+and building green. Voice input, the tiered deterministic+LLM intent router/handler
+registry, generic executor primitives/handlers, and the Ghostty-backed agent swarm
+handler are built; Slack reply and artifact window continue in the remaining phases.
 
 ## Docs
 

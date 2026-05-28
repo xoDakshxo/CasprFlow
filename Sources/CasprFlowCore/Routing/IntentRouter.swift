@@ -14,6 +14,12 @@ public struct DeterministicRouter: IntentRouter {
     private static let agentSwarmRule = RegexRule(
         #"^(?:spin up|start|launch) (?<count>\d+|a|one|two|three|four|five|six|seven|eight|nine|ten) agents?(?:.*?)\b(?:refactor|fix|do|build)\b (?<task>.+)$"#
     )
+    private static let agentSwarmProjectRule = RegexRule(
+        #"^(?:spin up|start|launch) (?<count>\d+|a|one|two|three|four|five|six|seven|eight|nine|ten) agents?(?: (?:on|in) (?<project>.+?))? for (?<task>.+)$"#
+    )
+    private static let bareAgentSwarmRule = RegexRule(
+        #"^(?:spin up|start|launch) (?<count>\d+|a|one|two|three|four|five|six|seven|eight|nine|ten) agents?(?: (?:on|in) (?<project>.+))?$"#
+    )
     private static let slackReplyRule = RegexRule(
         #"^(?:reply|respond|tell|message)(?: to)? (?<recipient>[a-z0-9_@.-]+)(?: (?:that|saying|with))? (?<message>.+)$"#
     )
@@ -86,6 +92,42 @@ public struct DeterministicRouter: IntentRouter {
                     "count": Self.normalizedCount(count),
                     "task": task
                 ],
+                confidence: 1,
+                rawText: rawText
+            )
+        }
+
+        if let match = Self.agentSwarmProjectRule.firstMatch(in: normalizedText),
+           let count = match.capture("count"),
+           let task = match.capture("task") {
+            var slots = [
+                "count": Self.normalizedCount(count),
+                "task": task
+            ]
+            if let project = match.capture("project") {
+                slots["project"] = project
+            }
+
+            return Intent(
+                kind: .agentSwarm,
+                slots: slots,
+                confidence: 1,
+                rawText: rawText
+            )
+        }
+
+        if let match = Self.bareAgentSwarmRule.firstMatch(in: normalizedText),
+           let count = match.capture("count") {
+            var slots = [
+                "count": Self.normalizedCount(count)
+            ]
+            if let project = match.capture("project") {
+                slots["project"] = project
+            }
+
+            return Intent(
+                kind: .agentSwarm,
+                slots: slots,
                 confidence: 1,
                 rawText: rawText
             )

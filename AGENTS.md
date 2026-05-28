@@ -9,8 +9,9 @@ the phases in `docs/implementation/`.
 Raycast + Wispr Flow, but it **dispatches to agents and executes programmatic actions
 fast** instead of just launching apps. The user **holds Option+Space**, speaks a
 command, and a handler fires immediately via **programmatic methods** (URL schemes,
-AppleScript, deep links, CLI) — **never** vision/computer-use. There is **no text box**:
-voice is the only input.
+AppleScript, deep links, CLI) — **never** vision/computer-use. There is **no command text
+box**: voice is the normal input. Rare project/path ambiguity can use a one-off native
+clarification prompt, then the spoken alias is remembered.
 
 The interaction:
 1. Hold **Option + Space** (push-to-talk).
@@ -24,8 +25,8 @@ The interaction:
 
 Three reference flows (these are **examples that prove the primitives, not the scope**):
 - *"Get me the best restaurants from Google"* → browser opens with results, instantly.
-- *"Spin up 5 agents and refactor the UI docs"* → a terminal opens with 5 panes, each
-  running a headless Claude Code or Codex CLI on the task.
+- *"Spin up 3 agents on casprflow for UI docs, tests, and cleanup"* → Ghostty opens
+  with 3 native panes, each running interactive Codex on its owned slice.
 - *"Get this doc ready for Prachi"* → a skill-loaded SQL agent streams a query into a
   floating always-on-top artifact window; the user clicks Run; it executes against
   ClickHouse and confirms.
@@ -65,6 +66,13 @@ shell + connectors are kept, and the phased dispatcher build is underway:
   route→dispatch loop with a logging stub until real handlers arrive in phase 3.
 - Phase 3 adds the universal URL/app/AppleScript/shell executors plus browser-search,
   open-URL, open-app, and guarded shell handlers for first end-to-end dispatch.
+- Phase 4 adds `SwarmHost`/`GhosttyHost`, project resolution for short repo names, and
+  `AgentSwarmHandler` for Ghostty-backed CLI agent panes. `TmuxHost` and `WarpHost`
+  remain alternate hosts, but Ghostty is the default because it gives native panes
+  without a nested multiplexer.
+- Phase 7's `LLMRouter` has been pulled forward as a Tier-1 fallback behind the
+  deterministic fast path. Project resolution now uses learned aliases + fuzzy folder
+  search instead of repo-specific speech aliases.
 - Kept connectors: `HotkeyService`, `FloatingPanel` (HUD/artifact shell), `PasteService`,
   `CasprFlowLogo`/`CasprFlowLogoMark` (spinner), `LLMClient` (OpenAI text client), the
   full permission stack (Accessibility + Screen Recording, **including the

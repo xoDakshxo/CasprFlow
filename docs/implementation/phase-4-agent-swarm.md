@@ -2,13 +2,18 @@
 
 ## Goal
 
-"Spin up 5 agents and refactor the UI docs" → a terminal opens with N panes, each
-running a headless Claude Code or Codex CLI instance on the task. The terminal is an
-implementation detail behind a `SwarmHost` protocol — Warp first, tmux/iTerm later.
+"Spin up 3 agents on casprflow for UI docs, tests, and cleanup" → Ghostty opens with N
+native panes, each running interactive Codex on an expanded scoped task. The terminal is an
+implementation detail behind a `SwarmHost` protocol — Ghostty is the default because it
+provides native scriptable panes without a nested multiplexer.
 
 ## Build
 
-- `Sources/CasprFlowCore/Exec/SwarmHost.swift` — the protocol + a `WarpHost` impl.
+- `Sources/CasprFlowCore/Exec/SwarmHost.swift` — the protocol + alternate
+  `TmuxHost`/`WarpHost` impls.
+- `Sources/CasprFlowCore/Exec/GhosttyHost.swift` — the default Ghostty AppleScript host.
+- `Sources/CasprFlowCore/Exec/ProjectResolver.swift` — default repo + alias/exact-folder
+  resolver for short project names such as `casprflow` and `this project folder`.
 - `Sources/CasprFlowCore/Handlers/AgentSwarmHandler.swift` — `.agentSwarm` → build a
   `SwarmSpec` from slots → hand to the configured `SwarmHost`.
 
@@ -21,21 +26,29 @@ protocol SwarmHost {
 }
 ```
 
-## WarpHost
+## GhosttyHost
 
-Warp reads YAML launch configurations from
-`~/.warp/launch_configurations/<name>.yaml` and opens them via
-`open "warp://launch/<name>"`. Write a config with one tab split into N panes, each pane
-running the agent command, then open the URL.
+`GhosttyHost` uses Ghostty's AppleScript dictionary to create a native window, split
+additional terminals, set each terminal's working directory, then sends each Codex
+command into the corresponding pane:
 
-Per-pane command shape (tool from the `tool` slot, default `claude`):
 ```
-cd <cwd> && claude -p "<task> (agent <i> of <n>)"
-# or: cd <cwd> && codex exec "<task> (agent <i> of <n>)"
+new window with configuration <cwd>
+split pane1 direction right/down with configuration <cwd>
+input text <command> to paneN
+send key "enter" to paneN
+```
+
+Per-pane command shape (tool from the `tool` slot, default `codex`):
+```
+cd <cwd> && codex
+cd <cwd> && codex "<full expanded prompt>"
+# or: cd <cwd> && claude -p "<full expanded prompt>"
 ```
 `claude` lives at `~/.local/bin/claude`, `codex` at `/opt/homebrew/bin/codex`. Resolve
-full paths (login shells may differ). Headless/non-interactive flags so each pane runs
-the task and reports.
+full paths (login shells may differ). Codex uses the interactive CLI entrypoint so each
+pane matches the experience of typing `codex` directly, with the expanded prompt already
+seeded.
 
 > **The agent panes need the full intent.** Each pane's prompt must carry the complete
 > task plus enough framing that a fresh agent knows what to do without the user present:
@@ -43,11 +56,21 @@ the task and reports.
 > when done. A vague prompt produces vague work — see
 > [`../../AGENTS.md`](../../AGENTS.md) and craft the per-pane prompt deliberately.
 
-## Swappable hosts (later)
+The user should not have to dictate that full prompt. The deterministic router accepts
+short forms like `spin up 3 agents on casprflow for UI docs, tests, and cleanup`.
+`ProjectResolver` resolves the project slot from the current repo alias first, then exact
+folder matches under `~/Code` and `~/Code/ExternalProjects`. `SwarmTaskSplitter` maps a
+comma/`and` task list onto panes. If no explicit task is present (`spin up 3 agents`),
+each pane opens plain interactive Codex with no seeded prompt.
 
-- `TmuxHost` — `tmux new-session -d`, `split-window` ×(N-1), `send-keys` per pane, then
-  `open -a <terminal>` attached. Bundleable + headless + deterministic. (`tmux` not yet
-  installed.)
+## Swappable hosts
+
+- `TmuxHost` — `tmux new-session -d`, `split-window` x(N-1), `send-keys` per pane, then
+  opens Terminal attached. Useful fallback, but not the default because the visible
+  nested tmux UI is a poor swarm surface.
+- `WarpHost` — writes launch-config YAML and opens `warp://launch/...`. Kept as an
+  alternate, but not the default because the installed Warp build did not reliably
+  resolve generated launch config files by URI.
 - `iTermHost` — AppleScript splits + typed commands.
 
 The handler must not change when the host changes.
@@ -59,8 +82,12 @@ The handler must not change when the host changes.
 
 ## Acceptance
 
-- "spin up 3 agents to refactor the UI docs" → Warp opens with 3 panes, each running an
-  agent on the task in the right directory.
+- "spin up 3 agents to refactor the UI docs" → Ghostty opens with 3 native panes, each
+  running an agent on the task in the right directory.
+- "spin up 3 agents" → Ghostty opens with 3 native panes, each running plain interactive
+  Codex with no seeded prompt.
+- "spin up 3 agents on casprflow for UI docs, tests, and cleanup" → Ghostty opens with
+  3 panes in the CasprFlow repo, with owned tasks split across panes.
 - Swapping the configured `SwarmHost` to a stub is a one-line change in wiring.
 - `swift build` green, `CasprFlowChecks` passes (SwarmSpec builder + per-pane command
   assertions).
