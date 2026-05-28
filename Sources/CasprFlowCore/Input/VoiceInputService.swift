@@ -274,6 +274,12 @@ public final class VoiceInputService {
         recognitionRequest?.endAudio()
 
         return await withCheckedContinuation { continuation in
+            if let pendingContinuation = stopContinuation {
+                stopContinuation = nil
+                let transcript = SelectionTextNormalizer.clean(latestTranscript) ?? ""
+                pendingContinuation.resume(returning: transcript)
+            }
+
             stopContinuation = continuation
             let timeout = VoiceCaptureFinalization.timeoutNanoseconds(
                 transcript: latestTranscript,

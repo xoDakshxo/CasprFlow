@@ -1,11 +1,12 @@
 import Foundation
 
-public struct ProjectAliasStore: @unchecked Sendable {
+public final class ProjectAliasStore: @unchecked Sendable {
     private let fileURL: URL
     private let fileManager: FileManager
+    private let lock = NSRecursiveLock()
 
     public init(
-        fileURL: URL = Self.defaultFileURL(),
+        fileURL: URL = ProjectAliasStore.defaultFileURL(),
         fileManager: FileManager = .default
     ) {
         self.fileURL = fileURL
@@ -13,6 +14,9 @@ public struct ProjectAliasStore: @unchecked Sendable {
     }
 
     public func loadAliases() -> [String: URL] {
+        lock.lock()
+        defer { lock.unlock() }
+
         guard fileManager.fileExists(atPath: fileURL.path),
               let data = try? Data(contentsOf: fileURL),
               let payload = try? JSONDecoder().decode(ProjectAliasPayload.self, from: data) else {
@@ -27,6 +31,9 @@ public struct ProjectAliasStore: @unchecked Sendable {
     }
 
     public func saveAlias(_ alias: String, projectURL: URL) throws {
+        lock.lock()
+        defer { lock.unlock() }
+
         let normalizedAlias = ProjectResolver.normalizedName(alias)
         guard !normalizedAlias.isEmpty else { return }
 

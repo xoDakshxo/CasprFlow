@@ -197,6 +197,7 @@ public struct ProjectResolver: Sendable {
 
         for child in children {
             guard Self.isExistingDirectory(child) else { continue }
+            guard !Self.shouldSkipSearchDirectory(child) else { continue }
             candidates.append(child.standardizedFileURL)
 
             let gitDirectory = child.appendingPathComponent(".git", isDirectory: true)
@@ -209,6 +210,27 @@ public struct ProjectResolver: Sendable {
 
         return candidates
     }
+
+    public static func shouldSkipSearchDirectory(_ url: URL) -> Bool {
+        skippedSearchDirectoryNames.contains(url.lastPathComponent)
+    }
+
+    private static let skippedSearchDirectoryNames: Set<String> = [
+        ".build",
+        ".dart_tool",
+        ".gradle",
+        ".next",
+        ".pnpm-store",
+        ".swiftpm",
+        "Carthage",
+        "DerivedData",
+        "Pods",
+        "build",
+        "dist",
+        "node_modules",
+        "target",
+        "vendor"
+    ]
 
     public static func isLikelySameName(_ lhs: String, _ rhs: String) -> Bool {
         guard lhs.count >= 4, rhs.count >= 4 else { return false }

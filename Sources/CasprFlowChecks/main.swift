@@ -260,6 +260,28 @@ do {
     expect(candidates.contains(fuzzyProject.path), "fuzzy resolver returns candidate path")
 }
 expect(
+    ProjectResolver.shouldSkipSearchDirectory(URL(fileURLWithPath: "/tmp/node_modules")),
+    "project resolver skips dependency directories during search"
+)
+let skippedRoot = FileManager.default.temporaryDirectory
+    .appendingPathComponent("casprflow-skipped-\(UUID().uuidString)", isDirectory: true)
+let skippedProject = skippedRoot
+    .appendingPathComponent("node_modules", isDirectory: true)
+    .appendingPathComponent("CasprFlow", isDirectory: true)
+try FileManager.default.createDirectory(at: skippedProject, withIntermediateDirectories: true)
+let skippedResolver = ProjectResolver(
+    defaultProjectURL: URL(fileURLWithPath: "/tmp/DefaultProject"),
+    aliases: [:],
+    searchRoots: [skippedRoot],
+    aliasStore: ProjectAliasStore(fileURL: skippedRoot.appendingPathComponent("aliases.json"))
+)
+do {
+    _ = try skippedResolver.resolve(project: "CasprFlow")
+    expect(false, "project resolver should not search dependency directories")
+} catch SwarmHostError.projectNotFound(let project) {
+    expect(project == "CasprFlow", "project resolver skips dependency directory matches")
+}
+expect(
     SwarmTaskSplitter.slices(from: "ui docs, tests, and cleanup", expectedCount: 3) == [
         "ui docs",
         "tests",
