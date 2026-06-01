@@ -1,75 +1,68 @@
-# Implementation plan
+# Implementation plan — Agentic Orchestrator (v3)
 
-The dispatcher is built on top of the kept connector core (see
-[`../connectors.md`](../connectors.md)) in ordered phases. Each phase is shippable,
-compiles, and has an acceptance check. Build them in order — later phases assume the
-seams from earlier ones.
+This is the **execution source of truth**. Build one phase at a time, in order. Each
+phase is a single shippable PR that compiles, keeps `CasprFlowChecks` green, and meets
+its **latency budget**. Later phases assume the seams from earlier ones.
 
-**Guiding principle (read [`../decisions.md`](../decisions.md#d2b) first):** build
-**universal executor primitives**, then compose **thin handlers** over them. The
-reference handlers (browser search, agent swarm, Slack reply, SQL artifact) prove the
-primitives; they are not the scope. Adding a capability = adding a handler, not new
-plumbing. Keep app-specific knowledge at the edge.
+Read first, in order:
+1. [`../architecture.md`](../architecture.md) — the plan→capabilities→agent model, the
+   three execution tiers, the capability protocol.
+2. [`../decisions.md`](../decisions.md) — locked choices (D0 latency governs; D2 revised:
+   computer-use is the last tier; D9–D13 new).
+3. [`../latency.md`](../latency.md) — **the contract every phase is graded against.**
+4. [`../connectors.md`](../connectors.md) — the kept core to reuse, with file paths.
+5. [`CODEX_PLAN.md`](CODEX_PLAN.md) — how to work, PR conventions, the per-phase review
+   checklist the reviewer will use.
 
-## Interaction model (voice-first, no command text box)
+## The shift in one sentence
 
-There is **no command text field**. You press and **hold** Option+Space; a small Wispr-style
-transcript pill appears center-bottom of the screen and updates with your words; you
-**release**; the pill transitions into the existing **CasprFlow spinner** while the
-transcript is routed and dispatched. If the utterance is short and final text arrives
-just after release, the pill keeps that text visible next to the spinner briefly.
-Push-to-talk is already wired in `HotkeyService` (press/release) and `AppCoordinator`
-(`startListening`/`stopListening`).
+Replace *classify-into-fixed-enum → thin one-shot handler* with *wide deterministic
+fast-path → (on miss) LLM planner → ordered capability calls*, where capabilities span
+three tiers — programmatic, in-app agent loop, computer-use — and **the common path
+never touches the network** (D0).
 
-Rare ambiguous project/path names can open a one-off native clarification prompt. The
-resolved spoken alias is persisted, so this is not part of the normal command input
-surface.
+## Interaction model (unchanged)
+
+Hold **Option+Space**, speak, release. The Wispr-style HUD streams the on-device
+transcript, then transitions to the spinner while the orchestrator runs. No command text
+box. The streaming partials now also drive **speculative planning** (phase 11). Two
+interactive gates may appear — **clarify** (missing arg) and **confirm** (outward/
+irreversible action) — and nowhere else (D13).
 
 ## Phases
 
-| # | Phase | Builds | Proves |
-|---|---|---|---|
-| 1 | [Voice HUD](phase-1-voice-hud.md) | `VoiceHUDController`, transcript→spinner HUD, on-device STT, push-to-talk capture | hold → live transcript → release → transcript + spinner |
-| 2 | [Router + registry](phase-2-router-and-registry.md) | `Intent`, `IntentRouter` (deterministic), `ActionHandler`, `HandlerRegistry`, dispatch loop | a spoken phrase routes to a handler |
-| 3 | [Executor primitives](phase-3-executor-primitives.md) | `URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`, `ShellRunner` + generic handlers (`OpenURL`, `OpenApp`, `BrowserSearch`) | **end-to-end dispatch, sub-second** |
-| 4 | [Agent swarm](phase-4-agent-swarm.md) | `SwarmHost` protocol + Ghostty impl, `ProjectResolver`, `AgentSwarmHandler` | "spin up N agents" opens N scoped CLI panes |
-| 5 | [Slack reply](phase-5-slack-reply.md) | `SlackReplyHandler` over `PasteService` | realtime "reply to X with Y" pastes a draft |
-| 6 | [Artifact window](phase-6-artifact-window.md) | `ArtifactWindow` primitive + `SQLArtifactHandler` (the Prachi flow) | stream output into a floating panel, Run |
-| 7 | [LLM router + polish](phase-7-llm-router-and-polish.md) | Tier-1 `LLMRouter` (nano, structured), preconnect, prefetch, latency logging | the long tail routes; budgets met |
+| # | Phase | Builds | Proves | State |
+|---|---|---|---|---|
+| 1 | [Voice HUD](phase-1-voice-hud.md) | push-to-talk, on-device STT, transcript→spinner HUD | hold → transcript → release | **done** |
+| 8 | [Capability model + registry](phase-8-capability-model.md) | `Capability`, `CapabilityCall/Result`, `JSONValue`, `CapabilityRegistry`, `ExecutionContext`; migrate existing executors to capabilities behind a shim | existing commands still dispatch, now via capabilities | |
+| 9 | [Wide FastRouter](phase-9-fast-router.md) | `FastRouter` deterministic match → `CapabilityCall`, broadened command-family coverage + slot tolerance | most everyday commands route at **zero network, <2 ms** | |
+| 10 | [Planner](phase-10-planner.md) | `Planner` (LLM) → ordered multi-step `Plan` from the capability catalog; strict JSON; stub-tested | the long tail becomes a real multi-step plan | |
+| 11 | [Orchestrator + gates + speculation](phase-11-orchestrator.md) | `Orchestrator` (fast→plan→execute, thread results), clarify/confirm gates, **speculative planning**, wire into `AppCoordinator` | end-to-end agentic dispatch; planner latency hidden | |
+| 12 | [TaskAgent](phase-12-task-agent.md) | in-app `run_task` observe→think→act loop over a capability subset; step budget; recursion guard | a multi-step desktop task runs to completion in-app | |
+| 13 | [control_ui: Accessibility](phase-13-control-ui-accessibility.md) | `AccessibilityDriver` (read tree, find, press, set value) + `control_ui` AX path | drive an app with no CLI/URL scheme, locally, fast | |
+| 14 | [control_ui: vision fallback](phase-14-control-ui-vision.md) | `ComputerUseModel` + Anthropic impl; screenshot→action→`CGEvent` loop; AX-first fallback | reach a target AX can't, gated + acknowledged-slow | |
+| 15 | [Artifact window](phase-15-artifact-window.md) | `ArtifactWindow` primitive + `draft_artifact` + `paste_text` (the Prachi flow) | stream output to a floating panel, Run; never auto-send | |
+| 16 | [Latency hardening + polish](phase-16-latency-polish.md) | telemetry (tier/speculation hit-rate), preconnect for vision, planner timeout→clarify, config, allowlists | budgets measured + held; graceful degradation | |
 
-Phase 7's router fallback has been pulled forward before phases 5/6 so long-tail spoken
-commands can map into the same handler registry while Slack/artifact handlers are still
-pending. See the current implementation log for the exact out-of-order status and
-remaining polish: [`current-implementation-log.md`](current-implementation-log.md).
+Build order is strict 8 → 16. Phases 8–11 are the **brain** (must land first and clean).
+12 adds the agent loop. 13–14 add computer-use. 15 is the artifact flow. 16 hardens.
 
-## Current implementation order
+## Hard rules for every phase
 
-The build has intentionally diverged from the original linear queue:
-
-| Order built | Phase | Current state |
-|---|---|---|
-| 1 | Phase 1 — Voice HUD | Built |
-| 2 | Phase 2 — Router + registry | Built |
-| 3 | Phase 3 — Executor primitives | Built |
-| 4 | Phase 4 — Agent swarm | Built on the current branch |
-| 5 | Phase 7 — LLM router fallback | Pulled forward on the current branch |
-| 6 | Phase 5 — Slack reply | Pending |
-| 7 | Phase 6 — Artifact window | Pending |
-
-The pull-forward is narrow: Tier 0 remains the common fast path, and Tier 1 only
-classifies missed transcripts into the existing `Intent` shape. It does not replace
-handlers or start phases 5/6.
-
-## Conventions for the build
-
+- **Latency is acceptance, not aspiration.** Hit the tier budget in
+  [`../latency.md`](../latency.md). A FastRouter hit-rate or tier-1 timing regression
+  **fails the phase**.
 - **Reuse, don't rewrite.** Wire into the kept core (`AppCoordinator`, `FloatingPanel`,
-  `HotkeyService`, `PasteService`, `LLMClient`, permission stack).
-- **Latency is a requirement.** Honor [`../latency.md`](../latency.md): prewarm,
-  optimistic spinner, deterministic fast-path, on-device STT, warm TLS.
-- **Never auto-send.** Output handlers paste and stop.
-- **Group new code by role** under `Sources/CasprFlowCore/`: `Routing/`, `Handlers/`,
-  `Exec/`, `Input/`. Keep handlers thin; put shared mechanics in executors.
-- **Keep the checks target green.** Add a small assertion to `CasprFlowChecks` for each
-  new pure-logic unit (router matching, slot extraction).
-- **Each phase ends with:** `swift build` green, `swift run CasprFlowChecks` passes, and
-  the phase's manual acceptance check performed.
+  `HotkeyService`, `PasteService`, `LLMClient`, executors, permission stack). See
+  [`../connectors.md`](../connectors.md).
+- **Keep it green.** End each phase with `swift build` passing and
+  `swift run CasprFlowChecks` passing. Add a `CasprFlowChecks` assertion for **every**
+  new pure-logic unit (matchers, schema shape, plan parse, AX selector match, coordinate
+  math). Pure logic must be unit-testable without a live app or network.
+- **Stub the network and the screen.** Planner, agent, and vision must be testable with
+  injected stubs (`LLMCompleting`, `ComputerUseModel`) — no live calls in checks.
+- **Never auto-send.** Outward/irreversible capabilities are `.confirm` (D8, D13).
+- **Group code by role** under `Sources/CasprFlowCore/`: `Input/`, `Routing/`,
+  `Capabilities/`, `Exec/`, `Agent/`, `ControlUI/`.
+- **One phase per PR**, titled `[v3][Phase N] …`. Don't broaden scope or jump ahead.
+- **Keep docs aligned.** If you change a seam, update the doc that would contradict it.
