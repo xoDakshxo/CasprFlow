@@ -1,9 +1,9 @@
 import Foundation
 
 public struct OpenAppHandler: ActionHandler {
-    private let launcher: AppLauncher
+    private let launcher: any AppLaunching
 
-    public init(launcher: AppLauncher = AppLauncher()) {
+    public init(launcher: any AppLaunching = AppLauncher()) {
         self.launcher = launcher
     }
 
