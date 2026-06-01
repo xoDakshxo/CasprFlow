@@ -1,6 +1,6 @@
 import Foundation
 
-public enum IntentKind: String, Equatable, Sendable {
+public enum IntentKind: String, CaseIterable, Equatable, Sendable {
     case openApp
     case openURL
     case shell

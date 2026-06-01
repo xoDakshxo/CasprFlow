@@ -123,6 +123,14 @@ public final class LLMClient {
         self.session = session
     }
 
+    public var isConfigured: Bool {
+        config.apiKey != nil
+    }
+
+    public var modelName: String {
+        config.model
+    }
+
     /// Warm the TLS connection to the endpoint so the first real request is not cold.
     /// Fire-and-forget; failures are ignored.
     public func preconnect() {
@@ -228,3 +236,5 @@ public final class LLMClient {
         return nil
     }
 }
+
+extension LLMClient: LLMCompleting {}

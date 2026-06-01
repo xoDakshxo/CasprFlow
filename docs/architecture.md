@@ -25,7 +25,7 @@ knowledge at the edge (in a handler or config), never in the core.
 | `ShellRunner` | Run any shell/CLI command (`Process`) | git, `clickhouse-client`, any tool |
 | `PasteService` (kept) | Paste text into the focused app | reply drafts, snippets — never auto-send |
 | `ArtifactWindow` | Floating always-on-top panel that streams model output + exposes actions (Run/Copy/Dismiss) | SQL agent, any "draft then act" flow |
-| `SwarmHost` | Spawn N terminal panes each running a command | agent swarms (Warp/tmux/iTerm impls) |
+| `SwarmHost` | Spawn N terminal panes each running a command | agent swarms (Ghostty now; tmux/Warp/iTerm alternates) |
 
 The reference handlers below (browser search, agent swarm, Slack reply, SQL artifact)
 exist to prove the primitives. They are **examples, not the scope** — the registry is
@@ -50,7 +50,7 @@ HandlerRegistry ── first ActionHandler whose match(Intent) == true wins
    │   (open-ended; reference handlers shown — add more freely)
    ├─ OpenAppHandler / ShellCommandHandler / OpenURLHandler   ← generic, app-agnostic
    ├─ BrowserSearchHandler  → URLSchemeLauncher   (open a search URL)
-   ├─ AgentSwarmHandler     → SwarmHost            (Warp/tmux/iTerm impl)
+   ├─ AgentSwarmHandler     → SwarmHost            (Ghostty/tmux/Warp/iTerm impl)
    ├─ SlackReplyHandler     → PasteService         (paste into focused composer)
    └─ SQLArtifactHandler    → ArtifactWindow + ShellRunner  (stream query, Run)
    │
@@ -65,10 +65,11 @@ ActionResult → HUD dismisses / brief result toast
 | `VoiceHUDController` | Own the prewarmed HUD panel; drive the transcript→spinner states; emit the final transcript into the route→dispatch loop. | **built** (phase 1) |
 | `VoiceInputService` | On-device streaming STT + mic level; start on press, stop on release. | **built** (phase 1) |
 | `Intent` | Value type: `kind` (enum) + `slots: [String: String]` + `confidence`. | **built** (phase 2) |
-| `IntentRouter` | Tier-0 deterministic now; Tier-1 LLM fallback later behind the same seam. | **built** (phase 2 deterministic; phase 7 LLM) |
+| `IntentRouter` | `TieredIntentRouter`: Tier-0 deterministic, Tier-1 strict JSON LLM fallback only on `.unknown`. | **built** (phase 2 deterministic; phase 7 LLM) |
 | `ActionHandler` / `HandlerRegistry` | Protocol + ordered registry; first match executes. | **built** (phase 2) |
-| Handlers | One per action class; programmatic execution. Generic URL/app/search/shell handlers are built; specialized handlers follow. | **built** (phase 3 generic; phase 4–6 specialized) |
-| Executors | `URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`, `ShellRunner`, `SwarmHost`. URL/app/script/shell executors are built; `SwarmHost` follows. | **built** (phase 3 core; phase 4 swarm) |
+| Handlers | One per action class; programmatic execution. Generic URL/app/search/shell handlers and `AgentSwarmHandler` are built; Slack/artifact handlers follow. | **built** (phase 3 generic; phase 4 swarm; phase 5–6 remaining) |
+| Executors | `URLSchemeLauncher`, `AppLauncher`, `AppleScriptRunner`, `ShellRunner`, `SwarmHost`. URL/app/script/shell executors and Ghostty-backed swarm launching are built. | **built** (phase 3 core; phase 4 swarm) |
+| `ProjectResolver` | Resolve spoken project names via current repo/defaults, learned aliases, indexed folder search, and one-off clarification when fuzzy matches need user choice. | **built** (phase 4; generalized during phase 7 pull-forward) |
 | `LLMClient` | Text-only OpenAI Responses client + config + preconnect. | **kept** |
 | `FloatingPanel` | Borderless floating non-activating NSPanel shell (voice HUD + artifact window). | **kept** |
 | `HotkeyService` | Carbon global hotkey (Option+Space). | **kept** |
@@ -94,6 +95,10 @@ See [`connectors.md`](connectors.md) for exact file paths and usage of the kept 
 7. The HUD dismisses (or shows a brief toast). Hard-to-reverse actions (sending) are
    never auto-performed — paste, don't send.
 
+Project names are resolved at handler time, not hardcoded in the router. Learned aliases
+are stored under Application Support, so if a spoken name like "casper flow" is clarified
+to a folder once, future utterances resolve directly.
+
 ## Intent model (target shape)
 
 The kinds below are the seed set — the enum is meant to grow as handlers are added.
@@ -109,7 +114,7 @@ enum IntentKind {
     case shell              // slots: command
     // specialized reference handlers
     case browserSearch      // slots: query, engine?
-    case agentSwarm         // slots: count, task, tool(claude|codex), dir?
+    case agentSwarm         // slots: count, task, project?, tool(claude|codex), dir?
     case slackReply         // slots: recipient, message
     case sqlArtifact        // slots: request  (skill-loaded agent → artifact window)
     case unknown

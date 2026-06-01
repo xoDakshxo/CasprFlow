@@ -10,9 +10,13 @@ final class AppCoordinator {
     private let hotkeyService = HotkeyService()
     private let permissionService = AccessibilityPermissionService()
     private let screenRecordingPermissionService = ScreenRecordingPermissionService()
-    private let intentRouter: any IntentRouter = DeterministicRouter()
+    private let llmClient = LLMClient()
+    private lazy var intentRouter: any IntentRouter = TieredIntentRouter(
+        tier1: LLMRouter(client: llmClient)
+    )
     private let handlerRegistry = HandlerRegistry(handlers: [
         BrowserSearchHandler(),
+        AgentSwarmHandler(),
         OpenURLHandler(),
         OpenAppHandler(),
         ShellCommandHandler()
@@ -36,6 +40,13 @@ final class AppCoordinator {
     private var isEnabled = true
 
     func start() {
+        llmClient.preconnect()
+        NSLog(
+            "[CasprFlow] LLM fallback config: model=%@ api_key=%@",
+            llmClient.modelName,
+            llmClient.isConfigured ? "present" : "missing"
+        )
+
         statusItemController = StatusItemController(
             onToggleEnabled: { [weak self] in self?.toggleEnabled() },
             onRequestAccessibility: { [weak self] in self?.showPermissionGuide(.accessibility) },

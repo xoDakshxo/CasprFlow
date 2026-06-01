@@ -9,8 +9,9 @@ transcript pill appears center-bottom and updates while you talk; on release it
 transitions into the CasprFlow spinner while keeping late short-utterance text visible
 briefly. An intent router classifies the command and a handler fires immediately using
 **programmatic methods** (URL schemes, AppleScript, CLI, deep links) — not vision-based
-computer use. There is **no text box**; voice is the input. Sub-second dispatch on the
-common path.
+computer use. There is **no command text box**; voice is the input. Rare project/path
+clarification can use a native one-off prompt, then CasprFlow stores the spoken alias.
+Sub-second dispatch on the common path.
 
 It is a **universal dispatcher**, not a launcher for a fixed set of apps. A small set of
 app-agnostic executor primitives (open any URL/app, run any AppleScript/CLI, paste into
@@ -28,8 +29,9 @@ allocation. See [`latency.md`](latency.md) for the contract and the tactics.
 
 1. **Instant browser search** — "get me the best restaurants from Google" → the
    browser opens with results, sub-second.
-2. **Agent swarm** — "spin up 5 agents and refactor the UI docs" → a terminal
-   opens with 5 panes, each running a Claude Code or Codex CLI instance.
+2. **Agent swarm** — "spin up 3 agents on casprflow for UI docs, tests, and cleanup"
+   → Ghostty opens with 3 native panes, each running Codex with an expanded scoped
+   prompt.
 3. **Realtime Slack reply** — Slack notification → hotkey → "reply to Prachi that
    we'll ship Friday" → the draft is pasted into the Slack composer in near real
    time (never auto-sent).
@@ -40,9 +42,10 @@ This repo is in the phased dispatcher build:
 
 - The retired "knowledge fast replies" reply-capsule product has been stripped.
 - The native shell + connectors are kept and clean (see [`connectors.md`](connectors.md)).
-- Voice input, the deterministic intent router/handler registry, and the first generic
-  executor primitives/handlers are built.
-- Specialized handlers, swarm, artifact window, and LLM fallback remain sequenced in
+- Voice input, the tiered deterministic+LLM intent router/handler registry, the first
+  generic executor primitives/handlers, and the Ghostty-backed agent swarm handler are
+  built.
+- Slack reply and artifact window remain sequenced in
   [`implementation/`](implementation/README.md).
 
 ## How to run

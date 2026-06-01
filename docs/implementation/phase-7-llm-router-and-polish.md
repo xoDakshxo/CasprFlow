@@ -26,6 +26,12 @@ let json = try await llm.complete(
   on parse failure or low confidence, fall back to `.unknown` (HUD: "didn't catch that").
 - The enum of valid kinds in the schema must stay in sync with `IntentKind`.
 
+Implementation note: this router has been pulled forward before phases 5/6. Tier-0 still
+owns the known fast command shapes and never touches the network. Tier-1 only classifies
+`.unknown` transcripts into the same `Intent` enum and slot dictionary. The built strict
+schema uses explicit nullable slot keys rather than an open dynamic slot object because
+OpenAI strict structured outputs reject dynamic additional properties in this shape.
+
 ## Build — latency polish
 
 Implement the tactics in [`../latency.md`](../latency.md) that aren't in yet:
@@ -38,6 +44,16 @@ Implement the tactics in [`../latency.md`](../latency.md) that aren't in yet:
   debug builds.
 - Verify the panel is never reallocated on the hotkey path; the optimistic spinner shows
   before routing.
+
+## Build — learned project names
+
+Project/file path resolution must not rely on one repo-specific hardcoded speech alias.
+The swarm path uses:
+
+- `ProjectAliasStore` under `~/Library/Application Support/CasprFlow/project-aliases.json`.
+- `ProjectResolver` exact lookup plus fuzzy folder search under known code roots.
+- `ProjectClarificationService` only when the resolver finds likely candidates but cannot
+  safely choose. The chosen path is saved against the spoken phrase for future runs.
 
 ## Acceptance
 
