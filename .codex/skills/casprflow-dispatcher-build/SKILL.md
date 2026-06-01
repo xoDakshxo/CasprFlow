@@ -1,6 +1,6 @@
 ---
 name: casprflow-dispatcher-build
-description: Build or modify CasprFlow, the near-realtime macOS voice agent dispatcher. Use when implementing the voice HUD, intent router, action handlers, executor primitives (URL/app/AppleScript/CLI), agent swarm, artifact window, or sequencing work from docs/implementation. Covers scope, build order, and latency guardrails.
+description: Build or modify CasprFlow v3, the ultra-low-latency macOS agentic voice dispatcher. Use when implementing the capability model, FastRouter, Planner, Orchestrator, in-app TaskAgent, computer-use (`control_ui`), executor primitives, agent swarm, artifact window, or sequencing work from docs/implementation. Covers scope, build order (phases 8–16), and latency guardrails.
 ---
 
 # CasprFlow Dispatcher Build
@@ -9,55 +9,67 @@ description: Build or modify CasprFlow, the near-realtime macOS voice agent disp
 
 Read `AGENTS.md`, then the docs in this order before any product/architecture choice:
 
-1. `docs/README.md` — what it is + the three reference flows.
-2. `docs/architecture.md` — universal primitives, intent shape, data flow.
-3. `docs/decisions.md` — locked choices.
+1. `docs/README.md` — what it is + the brain + reference flows.
+2. `docs/architecture.md` — plan→capabilities→agent, the three tiers, the `Capability`
+   protocol, data flow.
+3. `docs/decisions.md` — locked choices (D0 latency governs; D2 revised; D9–D13).
 4. `docs/latency.md` — the latency contract.
-5. `docs/connectors.md` — the kept core to reuse.
+5. `docs/connectors.md` — the kept core to reuse + what v3 supersedes.
 6. `docs/implementation/README.md` — **the execution source of truth.** Work one phase
    at a time, in order.
+7. `docs/implementation/CODEX_PLAN.md` — how to work + the PR review checklist.
 
 ## What you're building
 
-A voice-first dispatcher: hold **Option+Space** → speak → release → an intent router
-classifies the transcript → a handler fires via programmatic methods (URL schemes,
-AppleScript, deep links, CLI). No text box. No vision. Sub-second on the common path.
+A voice-first agentic dispatcher: hold **Option+Space** → speak → release →
+**FastRouter** (zero network) handles the common case, else the **Planner** emits an
+ordered plan of **capability calls** the **Orchestrator** runs. Capabilities span three
+tiers — programmatic (URL/app/AppleScript/CLI/paste/swarm), in-app **TaskAgent** loop, and
+**computer-use** (`control_ui`, Accessibility-first + vision fallback). No text box.
 
 ## Core principles (do not violate)
 
-- **Latency is the product.** Deterministic zero-network router fast-path is the default;
-  the LLM is a fallback. Prewarm the panel, show the spinner optimistically, use on-device
-  STT, warm TLS, route off the main thread.
-- **Universal, not app-locked.** Build app-agnostic executor primitives; compose thin
-  handlers. New capability = new handler. Keep app-specific logic at the edge.
-- **Never auto-send.** Output handlers paste and stop.
+- **Ultra-low latency governs (D0).** Common path = zero network. The FastRouter must be
+  **wide** so the planner stays off it; the planner round-trip is hidden by **speculative
+  planning** during speech; computer-use is rare + AX-first. Prewarm panels, optimistic
+  spinner, on-device STT, warm TLS, route off-main. Prefer one up-front plan over an
+  iterating agent.
+- **Universal, not app-locked.** App-agnostic primitives; thin **capabilities** over them.
+  New ability = a new `Capability` (+ optional `fastMatch`), never a new enum or plumbing.
+  Keep app-specific logic at the edge.
+- **Programmatic before vision.** `control_ui` is the last tier; try AX before pixels.
+- **Never auto-send.** `.confirm` capabilities gate; outward actions paste-not-send.
 - **Reuse the kept core** (`docs/connectors.md`); don't rewrite it.
 
-## Build order (phases)
+## Build order (phases 8–16)
 
-Follow `docs/implementation/` exactly:
+Follow `docs/implementation/` exactly, one PR each, strict order:
 
-1. Voice HUD (sine-wave → spinner, on-device STT, push-to-talk capture).
-2. Intent + deterministic router + handler registry + dispatch loop.
-3. Executor primitives + generic handlers (open URL/app, browser search) → first
-   end-to-end, sub-second.
-4. Agent swarm (`SwarmHost` protocol + Warp impl).
-5. Slack realtime reply (via `PasteService`).
-6. Artifact window primitive + SQL agent (the Prachi flow).
-7. LLM router fallback (nano, structured) + latency polish.
+8. Capability model + registry (migrate executors as capabilities).
+9. Wide FastRouter (deterministic → `CapabilityCall`, zero network).
+10. Planner (LLM → ordered multi-step `Plan`, strict JSON).
+11. Orchestrator + clarify/confirm gates + speculative planning (wire into AppCoordinator).
+12. In-app `TaskAgent` loop (`run_task`).
+13. `control_ui`: Accessibility driver (AX-first).
+14. `control_ui`: vision fallback (computer-use, gated).
+15. `ArtifactWindow` + `draft_artifact` + `paste_text` (the Prachi flow).
+16. Latency hardening + telemetry + config + polish.
 
-Do not broaden scope until the current phase's acceptance check passes.
+(Phase 1 voice HUD already shipped.) Do not broaden scope until the current phase's
+acceptance check passes.
 
 ## Code layout
 
 New code under `Sources/CasprFlowCore/`, grouped by role: `Input/`, `Routing/`,
-`Handlers/`, `Exec/`. Handlers stay thin; shared mechanics live in executors.
+`Capabilities/` (+ `Capabilities/Builtin/`), `Exec/`, `Agent/`, `ControlUI/`.
+Capabilities stay thin; shared mechanics live in executors.
 
-## Agent prompts (swarm + SQL phases)
+## Agent prompts (swarm + TaskAgent)
 
-When CasprFlow spawns agents, each prompt must carry the **full intent**: the goal, the
-working directory, which slice it owns (agent i of n), constraints, and to report when
-done. An unattended agent only knows what its prompt says — make it complete.
+When CasprFlow spawns a swarm pane or runs a `TaskAgent`, each prompt/goal must carry the
+**full task**: the goal, the working context, which slice it owns (agent i of n for
+swarm), constraints, and to report when done. An unattended agent only knows what its
+prompt says — make it complete.
 
 ## Validation
 
