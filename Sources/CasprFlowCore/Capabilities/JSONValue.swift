@@ -14,7 +14,11 @@ public enum JSONValue: Equatable, Sendable {
     }
 
     public var intValue: Int? {
-        guard case .number(let value) = self, value.rounded() == value else { return nil }
+        guard case .number(let value) = self,
+              value.isFinite,
+              value.rounded() == value,
+              value >= Double(Int.min),
+              value < Double(Int.max) else { return nil }
         return Int(value)
     }
 
@@ -124,21 +128,51 @@ extension JSONValue: Codable {
 
         if container.decodeNil() {
             self = .null
-        } else if let value = try? container.decode(Bool.self) {
-            self = .bool(value)
-        } else if let value = try? container.decode(Double.self) {
-            self = .number(value)
-        } else if let value = try? container.decode(String.self) {
-            self = .string(value)
-        } else if let value = try? container.decode([JSONValue].self) {
-            self = .array(value)
-        } else if let value = try? container.decode([String: JSONValue].self) {
-            self = .object(value)
-        } else {
+            return
+        }
+
+        do {
+            self = .bool(try container.decode(Bool.self))
+            return
+        } catch DecodingError.typeMismatch(_, _) {
+        } catch {
+            throw error
+        }
+
+        do {
+            self = .number(try container.decode(Double.self))
+            return
+        } catch DecodingError.typeMismatch(_, _) {
+        } catch {
+            throw error
+        }
+
+        do {
+            self = .string(try container.decode(String.self))
+            return
+        } catch DecodingError.typeMismatch(_, _) {
+        } catch {
+            throw error
+        }
+
+        do {
+            self = .array(try container.decode([JSONValue].self))
+            return
+        } catch DecodingError.typeMismatch(_, _) {
+        } catch {
+            throw error
+        }
+
+        do {
+            self = .object(try container.decode([String: JSONValue].self))
+            return
+        } catch DecodingError.typeMismatch(_, _) {
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Unsupported JSON value."
             )
+        } catch {
+            throw error
         }
     }
 

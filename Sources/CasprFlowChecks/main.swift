@@ -206,6 +206,84 @@ private struct StubReadOnlyCapability: Capability {
     }
 }
 
+private struct StubIntegerCapability: Capability {
+    let name = "integer_param"
+    let summary = "Validate integer args."
+    let sideEffect: SideEffect = .readOnly
+    let parameters = CapabilitySchema(parameters: [
+        CapabilityParameter(
+            name: "count",
+            type: "integer",
+            description: "Integer count.",
+            required: true
+        )
+    ])
+
+    func execute(_ call: CapabilityCall, context: ExecutionContext) async throws -> CapabilityResult {
+        CapabilityResult(ok: true, message: "Count \(call.int("count") ?? -1)")
+    }
+}
+
+private struct CorruptArrayDecoder: Decoder {
+    var codingPath: [any CodingKey] { [] }
+    var userInfo: [CodingUserInfoKey: Any] { [:] }
+
+    func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key: CodingKey {
+        throw DecodingError.typeMismatch(
+            [String: JSONValue].self,
+            DecodingError.Context(codingPath: [], debugDescription: "not keyed")
+        )
+    }
+
+    func unkeyedContainer() throws -> any UnkeyedDecodingContainer {
+        throw DecodingError.typeMismatch(
+            [JSONValue].self,
+            DecodingError.Context(codingPath: [], debugDescription: "not unkeyed")
+        )
+    }
+
+    func singleValueContainer() throws -> any SingleValueDecodingContainer {
+        CorruptArraySingleValueContainer()
+    }
+}
+
+private struct CorruptArraySingleValueContainer: SingleValueDecodingContainer {
+    var codingPath: [any CodingKey] { [] }
+
+    func decodeNil() -> Bool { false }
+
+    func decode(_ type: Bool.Type) throws -> Bool { throw typeMismatch(type) }
+    func decode(_ type: String.Type) throws -> String { throw typeMismatch(type) }
+    func decode(_ type: Double.Type) throws -> Double { throw typeMismatch(type) }
+    func decode(_ type: Float.Type) throws -> Float { throw typeMismatch(type) }
+    func decode(_ type: Int.Type) throws -> Int { throw typeMismatch(type) }
+    func decode(_ type: Int8.Type) throws -> Int8 { throw typeMismatch(type) }
+    func decode(_ type: Int16.Type) throws -> Int16 { throw typeMismatch(type) }
+    func decode(_ type: Int32.Type) throws -> Int32 { throw typeMismatch(type) }
+    func decode(_ type: Int64.Type) throws -> Int64 { throw typeMismatch(type) }
+    func decode(_ type: UInt.Type) throws -> UInt { throw typeMismatch(type) }
+    func decode(_ type: UInt8.Type) throws -> UInt8 { throw typeMismatch(type) }
+    func decode(_ type: UInt16.Type) throws -> UInt16 { throw typeMismatch(type) }
+    func decode(_ type: UInt32.Type) throws -> UInt32 { throw typeMismatch(type) }
+    func decode(_ type: UInt64.Type) throws -> UInt64 { throw typeMismatch(type) }
+
+    func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
+        if type == [JSONValue].self {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(codingPath: [], debugDescription: "nested array failed")
+            )
+        }
+        throw typeMismatch(type)
+    }
+
+    private func typeMismatch(_ type: Any.Type) -> DecodingError {
+        DecodingError.typeMismatch(
+            type,
+            DecodingError.Context(codingPath: [], debugDescription: "wrong type")
+        )
+    }
+}
+
 private struct StubAppLauncher: AppLaunching {
     let result: ActionResult
 
@@ -239,9 +317,22 @@ let jsonPayload = JSONValue.object([
     "items": .array([.string("open_app"), .null]),
     "meta": .object(["tier": .number(1)])
 ])
+expect(JSONValue.number(42).intValue == 42, "JSONValue intValue accepts in-range integers")
+expect(JSONValue.number(1.5).intValue == nil, "JSONValue intValue rejects fractional numbers")
+expect(JSONValue.number(1e20).intValue == nil, "JSONValue intValue rejects out-of-range integers")
+expect(JSONValue.number(Double.infinity).intValue == nil, "JSONValue intValue rejects non-finite numbers")
 let encodedJSONValue = try JSONEncoder().encode(jsonPayload)
 let decodedJSONValue = try JSONDecoder().decode(JSONValue.self, from: encodedJSONValue)
 expect(decodedJSONValue == jsonPayload, "JSONValue round-trips through Codable")
+do {
+    _ = try JSONValue(from: CorruptArrayDecoder())
+    expect(false, "JSONValue decoder should propagate nested data corruption")
+} catch DecodingError.dataCorrupted(let context) {
+    expect(
+        context.debugDescription == "nested array failed",
+        "JSONValue decoder preserves nested decoding errors"
+    )
+}
 let jsonAnyRoundTrip = JSONValue(any: jsonPayload.anyValue)
 expect(jsonAnyRoundTrip == jsonPayload, "JSONValue round-trips through Any")
 let rawDictionary: [String: Any] = [
@@ -313,6 +404,17 @@ let readOnlyResult = await capabilityRegistry.dispatch(
 expect(readOnlyResult.ok, "stub read-only capability dispatch succeeds")
 expect(readOnlyResult.observation == "Observed cache", "stub read-only capability returns observation")
 expect(readOnlyResult.data["target"] == .string("cache"), "stub read-only capability returns data")
+let integerRegistry = CapabilityRegistry([StubIntegerCapability()])
+let validIntegerResult = await integerRegistry.dispatch(
+    CapabilityCall(capability: "integer_param", arguments: ["count": .number(3)]),
+    context: capabilityContext
+)
+expect(validIntegerResult.ok, "capability registry accepts integer schema type")
+let invalidIntegerResult = await integerRegistry.dispatch(
+    CapabilityCall(capability: "integer_param", arguments: ["count": .number(3.5)]),
+    context: capabilityContext
+)
+expect(!invalidIntegerResult.ok, "capability registry rejects fractional integer args")
 
 let appAction = ActionResult(ok: true, message: "Opened Linear")
 let legacyOpenAppResult = try await OpenAppHandler(

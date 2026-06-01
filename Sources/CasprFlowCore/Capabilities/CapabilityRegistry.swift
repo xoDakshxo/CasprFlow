@@ -104,6 +104,8 @@ public final class CapabilityRegistry {
         case ("string", .string), ("number", .number), ("boolean", .bool),
              ("object", .object), ("array", .array):
             return true
+        case ("integer", .number):
+            return value.intValue != nil
         default:
             return false
         }
