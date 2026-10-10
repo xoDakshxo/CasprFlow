@@ -173,6 +173,134 @@ private struct StubHandler: ActionHandler {
     }
 }
 
+private struct StubReadOnlyCapability: Capability {
+    let name = "inspect_state"
+    let summary = "Inspect stub state."
+    let sideEffect: SideEffect = .readOnly
+    let parameters = CapabilitySchema(parameters: [
+        CapabilityParameter(
+            name: "target",
+            type: "string",
+            description: "Thing to inspect.",
+            required: true
+        ),
+        CapabilityParameter(
+            name: "limit",
+            type: "number",
+            description: "Optional result limit.",
+            required: false
+        )
+    ])
+
+    func execute(_ call: CapabilityCall, context: ExecutionContext) async throws -> CapabilityResult {
+        let target = call.string("target") ?? "unknown"
+        return CapabilityResult(
+            ok: true,
+            message: "Inspected \(target)",
+            observation: "Observed \(target)",
+            data: [
+                "target": .string(target),
+                "count": .number(1)
+            ]
+        )
+    }
+}
+
+private struct StubIntegerCapability: Capability {
+    let name = "integer_param"
+    let summary = "Validate integer args."
+    let sideEffect: SideEffect = .readOnly
+    let parameters = CapabilitySchema(parameters: [
+        CapabilityParameter(
+            name: "count",
+            type: "integer",
+            description: "Integer count.",
+            required: true
+        )
+    ])
+
+    func execute(_ call: CapabilityCall, context: ExecutionContext) async throws -> CapabilityResult {
+        CapabilityResult(ok: true, message: "Count \(call.int("count") ?? -1)")
+    }
+}
+
+private struct CorruptArrayDecoder: Decoder {
+    var codingPath: [any CodingKey] { [] }
+    var userInfo: [CodingUserInfoKey: Any] { [:] }
+
+    func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key: CodingKey {
+        throw DecodingError.typeMismatch(
+            [String: JSONValue].self,
+            DecodingError.Context(codingPath: [], debugDescription: "not keyed")
+        )
+    }
+
+    func unkeyedContainer() throws -> any UnkeyedDecodingContainer {
+        throw DecodingError.typeMismatch(
+            [JSONValue].self,
+            DecodingError.Context(codingPath: [], debugDescription: "not unkeyed")
+        )
+    }
+
+    func singleValueContainer() throws -> any SingleValueDecodingContainer {
+        CorruptArraySingleValueContainer()
+    }
+}
+
+private struct CorruptArraySingleValueContainer: SingleValueDecodingContainer {
+    var codingPath: [any CodingKey] { [] }
+
+    func decodeNil() -> Bool { false }
+
+    func decode(_ type: Bool.Type) throws -> Bool { throw typeMismatch(type) }
+    func decode(_ type: String.Type) throws -> String { throw typeMismatch(type) }
+    func decode(_ type: Double.Type) throws -> Double { throw typeMismatch(type) }
+    func decode(_ type: Float.Type) throws -> Float { throw typeMismatch(type) }
+    func decode(_ type: Int.Type) throws -> Int { throw typeMismatch(type) }
+    func decode(_ type: Int8.Type) throws -> Int8 { throw typeMismatch(type) }
+    func decode(_ type: Int16.Type) throws -> Int16 { throw typeMismatch(type) }
+    func decode(_ type: Int32.Type) throws -> Int32 { throw typeMismatch(type) }
+    func decode(_ type: Int64.Type) throws -> Int64 { throw typeMismatch(type) }
+    func decode(_ type: UInt.Type) throws -> UInt { throw typeMismatch(type) }
+    func decode(_ type: UInt8.Type) throws -> UInt8 { throw typeMismatch(type) }
+    func decode(_ type: UInt16.Type) throws -> UInt16 { throw typeMismatch(type) }
+    func decode(_ type: UInt32.Type) throws -> UInt32 { throw typeMismatch(type) }
+    func decode(_ type: UInt64.Type) throws -> UInt64 { throw typeMismatch(type) }
+
+    func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
+        if type == [JSONValue].self {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(codingPath: [], debugDescription: "nested array failed")
+            )
+        }
+        throw typeMismatch(type)
+    }
+
+    private func typeMismatch(_ type: Any.Type) -> DecodingError {
+        DecodingError.typeMismatch(
+            type,
+            DecodingError.Context(codingPath: [], debugDescription: "wrong type")
+        )
+    }
+}
+
+private struct StubAppLauncher: AppLaunching {
+    let result: ActionResult
+
+    @MainActor
+    func open(_ name: String) async throws -> ActionResult {
+        result
+    }
+}
+
+private struct StubShellRunner: ShellRunning {
+    let result: ShellResult
+
+    func runShell(_ command: String, cwd: URL?, timeout: TimeInterval) async throws -> ShellResult {
+        result
+    }
+}
+
 let registry = HandlerRegistry(handlers: [
     StubHandler(message: "first"),
     StubHandler(message: "second")
@@ -180,6 +308,143 @@ let registry = HandlerRegistry(handlers: [
 let registryResult = await registry.dispatch(shellIntent)
 expect(registryResult.ok, "handler registry dispatch succeeds")
 expect(registryResult.message == "first", "handler registry uses first matching handler")
+
+// Phase 8 capability model: JSON values, strict schemas, registry validation, and executor wrappers.
+let jsonPayload = JSONValue.object([
+    "name": .string("casprflow"),
+    "count": .number(3),
+    "enabled": .bool(true),
+    "items": .array([.string("open_app"), .null]),
+    "meta": .object(["tier": .number(1)])
+])
+expect(JSONValue.number(42).intValue == 42, "JSONValue intValue accepts in-range integers")
+expect(JSONValue.number(1.5).intValue == nil, "JSONValue intValue rejects fractional numbers")
+expect(JSONValue.number(1e20).intValue == nil, "JSONValue intValue rejects out-of-range integers")
+expect(JSONValue.number(Double.infinity).intValue == nil, "JSONValue intValue rejects non-finite numbers")
+let encodedJSONValue = try JSONEncoder().encode(jsonPayload)
+let decodedJSONValue = try JSONDecoder().decode(JSONValue.self, from: encodedJSONValue)
+expect(decodedJSONValue == jsonPayload, "JSONValue round-trips through Codable")
+do {
+    _ = try JSONValue(from: CorruptArrayDecoder())
+    expect(false, "JSONValue decoder should propagate nested data corruption")
+} catch DecodingError.dataCorrupted(let context) {
+    expect(
+        context.debugDescription == "nested array failed",
+        "JSONValue decoder preserves nested decoding errors"
+    )
+}
+let jsonAnyRoundTrip = JSONValue(any: jsonPayload.anyValue)
+expect(jsonAnyRoundTrip == jsonPayload, "JSONValue round-trips through Any")
+let rawDictionary: [String: Any] = [
+    "title": "phase 8",
+    "required": true,
+    "depth": 2,
+    "nested": ["ok": true],
+    "array": ["one", 2],
+    "empty": NSNull()
+]
+guard let jsonDictionary = JSONValue.dictionary(from: rawDictionary) else {
+    expect(false, "JSONValue builds dictionary from [String: Any]")
+    exit(1)
+}
+let anyDictionary = JSONValue.anyDictionary(from: jsonDictionary)
+let rebuiltDictionary = JSONValue.dictionary(from: anyDictionary)
+expect(rebuiltDictionary == jsonDictionary, "JSONValue round-trips [String: Any] both ways")
+
+let capabilitySchema = CapabilitySchema(parameters: [
+    CapabilityParameter(name: "query", type: "string", description: "Search query.", required: true),
+    CapabilityParameter(name: "limit", type: "number", description: "Optional limit.", required: false)
+])
+let jsonSchema = capabilitySchema.jsonSchema()
+expect(jsonSchema["type"] as? String == "object", "capability schema emits object type")
+expect(jsonSchema["additionalProperties"] as? Bool == false, "capability schema is closed")
+expect(jsonSchema["required"] as? [String] == ["query"], "capability schema only requires required params")
+let schemaProperties = jsonSchema["properties"] as? [String: Any]
+let queryProperty = schemaProperties?["query"] as? [String: Any]
+let limitProperty = schemaProperties?["limit"] as? [String: Any]
+expect(queryProperty?["type"] as? String == "string", "capability schema includes query type")
+expect(limitProperty?["type"] as? String == "number", "capability schema includes optional param type")
+
+let capabilityContext = ExecutionContext(rawText: "inspect state")
+let capabilityRegistry = CapabilityRegistry([StubReadOnlyCapability()])
+let capabilityCatalog = capabilityRegistry.catalog()
+expect(capabilityCatalog.count == 1, "capability registry catalog includes registered capability")
+expect(capabilityCatalog[0].name == "inspect_state", "capability registry catalog includes capability name")
+expect(capabilityCatalog[0].sideEffect == .readOnly, "capability registry catalog includes side effect")
+expect(
+    capabilityCatalog[0].schema["additionalProperties"] as? Bool == false,
+    "capability registry catalog exposes strict schema"
+)
+expect(
+    capabilityRegistry.fastMatch("inspect state") == nil,
+    "capability registry fastMatch is nil without capability matchers"
+)
+let unknownCapabilityResult = await capabilityRegistry.dispatch(
+    CapabilityCall(capability: "missing_capability"),
+    context: capabilityContext
+)
+expect(!unknownCapabilityResult.ok, "capability registry rejects unknown capability")
+expect(
+    unknownCapabilityResult.message == "Unknown capability: missing_capability.",
+    "capability registry unknown message is clear"
+)
+let missingArgumentResult = await capabilityRegistry.dispatch(
+    CapabilityCall(capability: "inspect_state"),
+    context: capabilityContext
+)
+expect(!missingArgumentResult.ok, "capability registry rejects missing required arg")
+expect(
+    missingArgumentResult.message == "Missing required argument 'target' for capability inspect_state.",
+    "capability registry missing arg message is clear"
+)
+let readOnlyResult = await capabilityRegistry.dispatch(
+    CapabilityCall(capability: "inspect_state", arguments: ["target": .string("cache")]),
+    context: capabilityContext
+)
+expect(readOnlyResult.ok, "stub read-only capability dispatch succeeds")
+expect(readOnlyResult.observation == "Observed cache", "stub read-only capability returns observation")
+expect(readOnlyResult.data["target"] == .string("cache"), "stub read-only capability returns data")
+let integerRegistry = CapabilityRegistry([StubIntegerCapability()])
+let validIntegerResult = await integerRegistry.dispatch(
+    CapabilityCall(capability: "integer_param", arguments: ["count": .number(3)]),
+    context: capabilityContext
+)
+expect(validIntegerResult.ok, "capability registry accepts integer schema type")
+let invalidIntegerResult = await integerRegistry.dispatch(
+    CapabilityCall(capability: "integer_param", arguments: ["count": .number(3.5)]),
+    context: capabilityContext
+)
+expect(!invalidIntegerResult.ok, "capability registry rejects fractional integer args")
+
+let appAction = ActionResult(ok: true, message: "Opened Linear")
+let legacyOpenAppResult = try await OpenAppHandler(
+    launcher: StubAppLauncher(result: appAction)
+).execute(openAppIntent)
+let capabilityOpenAppResult = try await OpenAppCapability(
+    launcher: StubAppLauncher(result: appAction)
+).execute(
+    CapabilityCall(capability: "open_app", arguments: ["app": .string("linear")]),
+    context: capabilityContext
+)
+expect(
+    capabilityOpenAppResult.actionResult == legacyOpenAppResult,
+    "OpenAppCapability produces the legacy ActionResult shape"
+)
+
+let shellStubResult = ShellResult(exitCode: 0, stdout: "## main\n", stderr: "")
+let legacyShellResult = try await ShellCommandHandler(
+    runner: StubShellRunner(result: shellStubResult)
+).execute(shellIntent)
+let capabilityShellResult = try await RunShellCapability(
+    runner: StubShellRunner(result: shellStubResult)
+).execute(
+    CapabilityCall(capability: "run_shell", arguments: ["command": .string("git status")]),
+    context: capabilityContext
+)
+expect(
+    capabilityShellResult.actionResult == legacyShellResult,
+    "RunShellCapability produces the legacy ActionResult shape"
+)
 
 // Phase 3 executors: pure builders/resolvers stay stable for generic handlers.
 let googleURL = BrowserSearchURLBuilder.googleSearchURL(query: "best restaurants in SF")

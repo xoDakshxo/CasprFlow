@@ -1,10 +1,10 @@
 import Foundation
 
 public struct ShellCommandHandler: ActionHandler {
-    private let runner: ShellRunner
+    private let runner: any ShellRunning
     private let timeout: TimeInterval
 
-    public init(runner: ShellRunner = ShellRunner(), timeout: TimeInterval = 5) {
+    public init(runner: any ShellRunning = ShellRunner(), timeout: TimeInterval = 5) {
         self.runner = runner
         self.timeout = timeout
     }
@@ -23,7 +23,7 @@ public struct ShellCommandHandler: ActionHandler {
             throw ShellRunnerError.rejected(cleanedCommand)
         }
 
-        let result = try await runner.runShell(cleanedCommand, timeout: timeout)
+        let result = try await runner.runShell(cleanedCommand, cwd: nil, timeout: timeout)
         guard result.exitCode == 0 else {
             return ActionResult(
                 ok: false,
